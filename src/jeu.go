@@ -14,10 +14,11 @@ type Joueur struct {
 }
 
 type Partie struct {
-	Equipe1 Equipe
-	Equipe2 Equipe
-	Paquet  CarteCollection
-	Menes   []Mene
+	Equipe1   Equipe
+	Equipe2   Equipe
+	Paquet    CarteCollection
+	Menes     []Mene
+	Melangeur Melangeur
 }
 
 type Contrat struct {
@@ -56,7 +57,7 @@ type Mene struct {
 	Contrat  Contrat
 	Preneuse *Equipe
 
-	plis       map[*Equipe][]Pli
+	Plis       map[*Equipe][]Pli
 	pliEnCours Pli
 }
 
@@ -85,9 +86,10 @@ func NouvellePartie(j1 Joueur, j2 Joueur, j3 Joueur, j4 Joueur) Partie {
 		},
 		NouveauPaquet32(),
 		[]Mene{},
+		&FischerYatesMelangeur{},
 	}
 
-	p.Paquet.Melanger()
+	p.Paquet = p.Melangeur.Melanger(p.Paquet)
 
 	return p
 }
@@ -99,9 +101,9 @@ func (p *Partie) Score() map[*Equipe]int {
 	s[&p.Equipe2] = 0
 
 	for _, mene := range p.Menes {
-		for equipe, plis := range mene.plis {
+		for equipe, plis := range mene.Plis {
 			for _, pli := range plis {
-				s[equipe] += len(pli.Cartes)
+				s[equipe] += pli.Score(mene.Contrat.Couleur)
 			}
 		}
 	}
@@ -157,10 +159,10 @@ func (p *Partie) JoueCarte(joueur *Joueur, carte Carte) error {
 	if len(m.pliEnCours.Cartes) == 4 {
 		gagnant := m.pliEnCours.Remporte(m.Contrat.Couleur)
 
-		if m.plis == nil {
-			m.plis = make(map[*Equipe][]Pli)
+		if m.Plis == nil {
+			m.Plis = make(map[*Equipe][]Pli)
 		}
-		m.plis[p.EquipeDe(gagnant)] = append(m.plis[p.EquipeDe(gagnant)], m.pliEnCours)
+		m.Plis[p.EquipeDe(gagnant)] = append(m.Plis[p.EquipeDe(gagnant)], m.pliEnCours)
 	}
 
 	return nil

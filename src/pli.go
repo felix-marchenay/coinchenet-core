@@ -39,3 +39,16 @@ func (p Pli) Remporte(a Atout) (g *Joueur) {
 
 	return g
 }
+
+func (p Pli) Score(a Atout) int {
+	if len(p.Cartes) == 0 {
+		return 0
+	}
+
+	s := 0
+	for _, c := range p.Cartes {
+		s += c.Points(a)
+	}
+
+	return s
+}

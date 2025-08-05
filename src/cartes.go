@@ -27,9 +27,103 @@ const (
 	As
 )
 
+func (c Carte) Points(a Atout) int {
+	if a == ToutAtout {
+		switch c.Valeur {
+		case Valet:
+			return 14
+		case Neuf:
+			return 9
+		case As:
+			return 6
+		case Dix:
+			return 5
+		case Roi:
+			return 3
+		case Dame:
+			return 1
+		case Sept, Huit:
+			return 0
+		default:
+			return 0
+		}
+	}
+
+	if a == SansAtout {
+		switch c.Valeur {
+		case As:
+			return 19
+		case Dix:
+			return 10
+		case Roi:
+			return 4
+		case Dame:
+			return 3
+		case Valet:
+			return 2
+		case Neuf, Sept, Huit:
+			return 0
+		default:
+			return 0
+		}
+	}
+
+	if Atout(c.Couleur) == a {
+		switch c.Valeur {
+		case Valet:
+			return 20
+		case Neuf:
+			return 14
+		case As:
+			return 11
+		case Dix:
+			return 10
+		case Roi:
+			return 4
+		case Dame:
+			return 3
+		case Sept, Huit:
+			return 0
+		default:
+			return 0
+		}
+	}
+
+	switch c.Valeur {
+	case As:
+		return 11
+	case Dix:
+		return 10
+	case Roi:
+		return 4
+	case Dame:
+		return 3
+	case Valet:
+		return 2
+	case Neuf, Sept, Huit:
+		return 0
+	default:
+		return 0
+	}
+}
+
 type Carte struct {
 	Couleur Couleur
 	Valeur  Valeur
+}
+
+type Melangeur interface {
+	Melanger(CarteCollection) CarteCollection
+}
+
+type FischerYatesMelangeur struct{}
+
+func (f *FischerYatesMelangeur) Melanger(cc CarteCollection) CarteCollection {
+	for i := len(cc.Cartes) - 1; i > 0; i-- {
+		j := rand.Intn(i + 1)
+		cc.Cartes[i], cc.Cartes[j] = cc.Cartes[j], cc.Cartes[i]
+	}
+	return cc
 }
 
 func (c *Carte) Bat(c2 *Carte, atout Atout, couleurDemandee Couleur) bool {
@@ -110,13 +204,6 @@ func (p *CarteCollection) Couper() {
 	c.Cartes = append(c.Cartes, p.Cartes[:r]...)
 
 	p.Cartes = c.Cartes
-}
-
-func (p *CarteCollection) Melanger() {
-	for i := len(p.Cartes) - 1; i > 0; i-- {
-		j := rand.Intn(i + 1)
-		p.Cartes[i], p.Cartes[j] = p.Cartes[j], p.Cartes[i]
-	}
 }
 
 func (cc *CarteCollection) Pop(carte Carte) (Carte, error) {

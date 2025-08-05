@@ -8,23 +8,61 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func serializePaquet(p src.CarteCollection) string {
+func SerializePaquet(p src.CarteCollection) string {
 	var result string
 	for _, carte := range p.Cartes {
-		result += serializeCarte(carte) + ", "
+		result += SerializeCarte(carte) + ", "
 	}
-	return "Paquet{" + result + "}"
+	return "Paquet{" + result + "}\n"
 }
 
-func serializeCarte(c src.Carte) string {
-	return "Carte{" + "Couleur: " + fmt.Sprint(c.Couleur) + ", Valeur: " + fmt.Sprint(c.Valeur) + "}"
+func SerializeCarte(c src.Carte) string {
+	cstr := ""
+	switch c.Couleur {
+	case src.Coeur:
+		cstr = "Coeur"
+	case src.Carreau:
+		cstr = "Carreau"
+	case src.Trefle:
+		cstr = "Trefle"
+	case src.Pique:
+		cstr = "Pique"
+	default:
+		cstr = "-"
+	}
+
+	vstr := ""
+	switch c.Valeur {
+	case src.Sept:
+		vstr = "Sept"
+	case src.Huit:
+		vstr = "Huit"
+	case src.Neuf:
+		vstr = "Neuf"
+	case src.Dix:
+		vstr = "Dix"
+	case src.Valet:
+		vstr = "Valet"
+	case src.Dame:
+		vstr = "Dame"
+	case src.Roi:
+		vstr = "Roi"
+	case src.As:
+		vstr = "As"
+	default:
+		vstr = "Inconnu"
+	}
+
+	return fmt.Sprintf("%s %s", vstr, cstr)
 }
 
 func TestNouveauPaquet32(t *testing.T) {
+
 	paquet := src.NouveauPaquet32()
 	if len(paquet.Cartes) != 32 {
 		t.Errorf("Le paquet doit contenir 32 cartes, obtenu %d", len(paquet.Cartes))
 	}
+	m := src.FischerYatesMelangeur{}
 
 	vu := make(map[src.Carte]bool)
 	for _, c := range paquet.Cartes {
@@ -35,11 +73,11 @@ func TestNouveauPaquet32(t *testing.T) {
 	}
 
 	for range 10 {
-		in := serializePaquet(paquet)
+		in := SerializePaquet(paquet)
 
-		paquet.Melanger()
+		paquet = m.Melanger(paquet)
 
-		assert.NotEqual(t, in, serializePaquet(paquet), "Le paquet mélangé doit contenir les mêmes cartes")
+		assert.NotEqual(t, in, SerializePaquet(paquet), "Le paquet mélangé doit contenir les mêmes cartes")
 	}
 
 	if len(paquet.Cartes) != 32 {
@@ -217,6 +255,24 @@ func TestPliRemporte_Provider(t *testing.T) {
 				assert.Equal(t, tt.expected.Nom, res.Nom)
 			}
 		})
+	}
+}
+
+func TestPoints162(t *testing.T) {
+	paquet := src.NouveauPaquet32()
+
+	total := make(map[src.Atout]int)
+	for _, carte := range paquet.Cartes {
+		total[src.AtoutCarreau] += carte.Points(src.SansAtout)
+		total[src.AtoutCoeur] += carte.Points(src.SansAtout)
+		total[src.AtoutPique] += carte.Points(src.SansAtout)
+		total[src.AtoutTrefle] += carte.Points(src.SansAtout)
+		total[src.SansAtout] += carte.Points(src.SansAtout)
+		total[src.ToutAtout] += carte.Points(src.SansAtout)
+	}
+
+	for atout, points := range total {
+		assert.Equal(t, 152, points, "La somme des points pour %v doit être 152, obtenu %d", atout, points)
 	}
 }
 

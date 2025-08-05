@@ -2,6 +2,7 @@ package test
 
 import (
 	"coinchenetcore/src"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -19,7 +20,9 @@ func TestNouvellePartie(t *testing.T) {
 			J2:    &src.Joueur{Nom: "Dicky"},
 			Score: 0,
 		},
-		Paquet: src.NouveauPaquet32(),
+		Paquet:    src.NouveauPaquet32(),
+		Menes:     []src.Mene{},
+		Melangeur: &FakeMelangeur{},
 	}
 
 	if len(partie.Paquet.Cartes) != 32 {
@@ -53,11 +56,16 @@ func TestNouvellePartie(t *testing.T) {
 		}
 	}
 
+	fmt.Printf("%s", SerializePaquet(partie.Equipe1.J1.Main))
+	fmt.Printf("%s", SerializePaquet(partie.Equipe1.J2.Main))
+
 	partie.JoueCarte(partie.Equipe1.J1, partie.Equipe1.J1.Main.Cartes[0])
 	partie.JoueCarte(partie.Equipe1.J2, partie.Equipe1.J2.Main.Cartes[0])
 	partie.JoueCarte(partie.Equipe2.J1, partie.Equipe2.J1.Main.Cartes[0])
 	partie.JoueCarte(partie.Equipe2.J2, partie.Equipe2.J2.Main.Cartes[0])
 
-	assert.LessOrEqual(t, 0, partie.Score()[&partie.Equipe1])
-	assert.LessOrEqual(t, 0, partie.Score()[&partie.Equipe2])
+	assert.Len(t, partie.Equipe1.J1.Main.Cartes, 7)
+	assert.Len(t, partie.Equipe1.J2.Main.Cartes, 7)
+	assert.Len(t, partie.Equipe2.J1.Main.Cartes, 7)
+	assert.Len(t, partie.Equipe2.J2.Main.Cartes, 7)
 }
