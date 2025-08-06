@@ -1,14 +1,13 @@
-package test
+package coinche
 
 import (
-	"coinchenetcore/src"
 	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
-func SerializePaquet(p src.CarteCollection) string {
+func SerializePaquet(p CarteCollection) string {
 	var result string
 	for _, carte := range p.Cartes {
 		result += SerializeCarte(carte) + ", "
@@ -16,16 +15,16 @@ func SerializePaquet(p src.CarteCollection) string {
 	return "Paquet{" + result + "}\n"
 }
 
-func SerializeCarte(c src.Carte) string {
+func SerializeCarte(c Carte) string {
 	cstr := ""
 	switch c.Couleur {
-	case src.Coeur:
+	case Coeur:
 		cstr = "Coeur"
-	case src.Carreau:
+	case Carreau:
 		cstr = "Carreau"
-	case src.Trefle:
+	case Trefle:
 		cstr = "Trefle"
-	case src.Pique:
+	case Pique:
 		cstr = "Pique"
 	default:
 		cstr = "-"
@@ -33,21 +32,21 @@ func SerializeCarte(c src.Carte) string {
 
 	vstr := ""
 	switch c.Valeur {
-	case src.Sept:
+	case Sept:
 		vstr = "Sept"
-	case src.Huit:
+	case Huit:
 		vstr = "Huit"
-	case src.Neuf:
+	case Neuf:
 		vstr = "Neuf"
-	case src.Dix:
+	case Dix:
 		vstr = "Dix"
-	case src.Valet:
+	case Valet:
 		vstr = "Valet"
-	case src.Dame:
+	case Dame:
 		vstr = "Dame"
-	case src.Roi:
+	case Roi:
 		vstr = "Roi"
-	case src.As:
+	case As:
 		vstr = "As"
 	default:
 		vstr = "Inconnu"
@@ -58,13 +57,13 @@ func SerializeCarte(c src.Carte) string {
 
 func TestNouveauPaquet32(t *testing.T) {
 
-	paquet := src.NouveauPaquet32()
+	paquet := NouveauPaquet32()
 	if len(paquet.Cartes) != 32 {
 		t.Errorf("Le paquet doit contenir 32 cartes, obtenu %d", len(paquet.Cartes))
 	}
-	m := src.FischerYatesMelangeur{}
+	m := FischerYatesMelangeur{}
 
-	vu := make(map[src.Carte]bool)
+	vu := make(map[Carte]bool)
 	for _, c := range paquet.Cartes {
 		if vu[c] {
 			t.Errorf("Carte dupliquée: %+v", c)
@@ -86,7 +85,7 @@ func TestNouveauPaquet32(t *testing.T) {
 }
 
 func TestTirer(t *testing.T) {
-	paquet := src.NouveauPaquet32()
+	paquet := NouveauPaquet32()
 
 	cartesTirees := paquet.Tirer(5)
 	if len(cartesTirees) != 5 {
@@ -105,138 +104,138 @@ func TestTirer(t *testing.T) {
 
 func TestPliRemporte_Provider(t *testing.T) {
 	type args struct {
-		cartes        map[*src.Joueur]*src.Carte
-		premierJoueur *src.Joueur
-		atout         src.Atout
+		cartes        map[*Joueur]*Carte
+		premierJoueur *Joueur
+		atout         Atout
 	}
-	j1 := &src.Joueur{Nom: "Alice"}
-	j2 := &src.Joueur{Nom: "Bob"}
-	j3 := &src.Joueur{Nom: "Charlie"}
-	j4 := &src.Joueur{Nom: "David"}
+	j1 := &Joueur{Nom: "Alice"}
+	j2 := &Joueur{Nom: "Bob"}
+	j3 := &Joueur{Nom: "Charlie"}
+	j4 := &Joueur{Nom: "David"}
 
 	tests := []struct {
 		name     string
 		args     args
-		expected *src.Joueur
+		expected *Joueur
 	}{
 		{
 			name: "Sans atout, couleur demandée gagne",
 			args: args{
-				cartes: map[*src.Joueur]*src.Carte{
-					j1: {Couleur: src.Coeur, Valeur: src.Dix},
-					j2: {Couleur: src.Coeur, Valeur: src.As},
-					j3: {Couleur: src.Trefle, Valeur: src.Roi},
-					j4: {Couleur: src.Pique, Valeur: src.Valet},
+				cartes: map[*Joueur]*Carte{
+					j1: {Couleur: Coeur, Valeur: Dix},
+					j2: {Couleur: Coeur, Valeur: As},
+					j3: {Couleur: Trefle, Valeur: Roi},
+					j4: {Couleur: Pique, Valeur: Valet},
 				},
 				premierJoueur: j1,
-				atout:         src.SansAtout,
+				atout:         SansAtout,
 			},
 			expected: j2,
 		},
 		{
 			name: "Atout gagne sur couleur demandée",
 			args: args{
-				cartes: map[*src.Joueur]*src.Carte{
-					j1: {Couleur: src.Coeur, Valeur: src.Dix},
-					j2: {Couleur: src.Carreau, Valeur: src.As},
-					j3: {Couleur: src.Coeur, Valeur: src.Valet},
-					j4: {Couleur: src.Pique, Valeur: src.Valet},
+				cartes: map[*Joueur]*Carte{
+					j1: {Couleur: Coeur, Valeur: Dix},
+					j2: {Couleur: Carreau, Valeur: As},
+					j3: {Couleur: Coeur, Valeur: Valet},
+					j4: {Couleur: Pique, Valeur: Valet},
 				},
 				premierJoueur: j1,
-				atout:         src.AtoutPique,
+				atout:         AtoutPique,
 			},
 			expected: j4,
 		},
 		{
 			name: "Premier joueur gagne si tous jouent même couleur",
 			args: args{
-				cartes: map[*src.Joueur]*src.Carte{
-					j1: {Couleur: src.Trefle, Valeur: src.Roi},
-					j2: {Couleur: src.Trefle, Valeur: src.Dame},
-					j3: {Couleur: src.Trefle, Valeur: src.Valet},
-					j4: {Couleur: src.Trefle, Valeur: src.Sept},
+				cartes: map[*Joueur]*Carte{
+					j1: {Couleur: Trefle, Valeur: Roi},
+					j2: {Couleur: Trefle, Valeur: Dame},
+					j3: {Couleur: Trefle, Valeur: Valet},
+					j4: {Couleur: Trefle, Valeur: Sept},
 				},
 				premierJoueur: j1,
-				atout:         src.SansAtout,
+				atout:         SansAtout,
 			},
 			expected: j1,
 		},
 		{
 			name: "Valet d'atout coupe",
 			args: args{
-				cartes: map[*src.Joueur]*src.Carte{
-					j1: {Couleur: src.Trefle, Valeur: src.Roi},
-					j2: {Couleur: src.Trefle, Valeur: src.Dame},
-					j3: {Couleur: src.Trefle, Valeur: src.Valet},
-					j4: {Couleur: src.Trefle, Valeur: src.Sept},
+				cartes: map[*Joueur]*Carte{
+					j1: {Couleur: Trefle, Valeur: Roi},
+					j2: {Couleur: Trefle, Valeur: Dame},
+					j3: {Couleur: Trefle, Valeur: Valet},
+					j4: {Couleur: Trefle, Valeur: Sept},
 				},
 				premierJoueur: j2,
-				atout:         src.AtoutTrefle,
+				atout:         AtoutTrefle,
 			},
 			expected: j3,
 		},
 		{
 			name: "ToutAtout, plus forte valeur gagne",
 			args: args{
-				cartes: map[*src.Joueur]*src.Carte{
-					j1: {Couleur: src.Coeur, Valeur: src.Valet},
-					j2: {Couleur: src.Coeur, Valeur: src.Neuf},
-					j3: {Couleur: src.Pique, Valeur: src.Valet},
-					j4: {Couleur: src.Trefle, Valeur: src.Valet},
+				cartes: map[*Joueur]*Carte{
+					j1: {Couleur: Coeur, Valeur: Valet},
+					j2: {Couleur: Coeur, Valeur: Neuf},
+					j3: {Couleur: Pique, Valeur: Valet},
+					j4: {Couleur: Trefle, Valeur: Valet},
 				},
 				premierJoueur: j2,
-				atout:         src.ToutAtout,
+				atout:         ToutAtout,
 			},
 			expected: j1,
 		},
 		{
 			name: "Premier tour classique, on fait tomber les atouts",
 			args: args{
-				cartes: map[*src.Joueur]*src.Carte{
-					j1: {Couleur: src.Coeur, Valeur: src.Valet},
-					j2: {Couleur: src.Coeur, Valeur: src.Neuf},
-					j3: {Couleur: src.Coeur, Valeur: src.Sept},
-					j4: {Couleur: src.Coeur, Valeur: src.Huit},
+				cartes: map[*Joueur]*Carte{
+					j1: {Couleur: Coeur, Valeur: Valet},
+					j2: {Couleur: Coeur, Valeur: Neuf},
+					j3: {Couleur: Coeur, Valeur: Sept},
+					j4: {Couleur: Coeur, Valeur: Huit},
 				},
 				premierJoueur: j1,
-				atout:         src.AtoutCoeur,
+				atout:         AtoutCoeur,
 			},
 			expected: j1,
 		},
 		{
 			name: "Personne ne fournit, personne ne coupe",
 			args: args{
-				cartes: map[*src.Joueur]*src.Carte{
-					j1: {Couleur: src.Carreau, Valeur: src.As},
-					j2: {Couleur: src.Carreau, Valeur: src.Dix},
-					j3: {Couleur: src.Coeur, Valeur: src.As},
-					j4: {Couleur: src.Trefle, Valeur: src.Sept},
+				cartes: map[*Joueur]*Carte{
+					j1: {Couleur: Carreau, Valeur: As},
+					j2: {Couleur: Carreau, Valeur: Dix},
+					j3: {Couleur: Coeur, Valeur: As},
+					j4: {Couleur: Trefle, Valeur: Sept},
 				},
 				premierJoueur: j4,
-				atout:         src.AtoutPique,
+				atout:         AtoutPique,
 			},
 			expected: j4,
 		},
 		{
 			name: "Coupé par un atout, mais pas le premier joueur",
 			args: args{
-				cartes: map[*src.Joueur]*src.Carte{
-					j1: {Couleur: src.Carreau, Valeur: src.As},
-					j2: {Couleur: src.Carreau, Valeur: src.Dix},
-					j3: {Couleur: src.Pique, Valeur: src.As},
-					j4: {Couleur: src.Trefle, Valeur: src.Sept},
+				cartes: map[*Joueur]*Carte{
+					j1: {Couleur: Carreau, Valeur: As},
+					j2: {Couleur: Carreau, Valeur: Dix},
+					j3: {Couleur: Pique, Valeur: As},
+					j4: {Couleur: Trefle, Valeur: Sept},
 				},
 				premierJoueur: j4,
-				atout:         src.AtoutPique,
+				atout:         AtoutPique,
 			},
 			expected: j3,
 		},
 		{
 			name: "Aucun pli, retourne nil",
 			args: args{
-				cartes:        map[*src.Joueur]*src.Carte{},
+				cartes:        map[*Joueur]*Carte{},
 				premierJoueur: j1,
-				atout:         src.SansAtout,
+				atout:         SansAtout,
 			},
 			expected: nil,
 		},
@@ -244,7 +243,7 @@ func TestPliRemporte_Provider(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			pli := src.Pli{
+			pli := Pli{
 				Cartes:        tt.args.cartes,
 				PremierJoueur: tt.args.premierJoueur,
 			}
@@ -259,16 +258,16 @@ func TestPliRemporte_Provider(t *testing.T) {
 }
 
 func TestPoints162(t *testing.T) {
-	paquet := src.NouveauPaquet32()
+	paquet := NouveauPaquet32()
 
-	total := make(map[src.Atout]int)
+	total := make(map[Atout]int)
 	for _, carte := range paquet.Cartes {
-		total[src.AtoutCarreau] += carte.Points(src.SansAtout)
-		total[src.AtoutCoeur] += carte.Points(src.SansAtout)
-		total[src.AtoutPique] += carte.Points(src.SansAtout)
-		total[src.AtoutTrefle] += carte.Points(src.SansAtout)
-		total[src.SansAtout] += carte.Points(src.SansAtout)
-		total[src.ToutAtout] += carte.Points(src.SansAtout)
+		total[AtoutCarreau] += carte.Points(SansAtout)
+		total[AtoutCoeur] += carte.Points(SansAtout)
+		total[AtoutPique] += carte.Points(SansAtout)
+		total[AtoutTrefle] += carte.Points(SansAtout)
+		total[SansAtout] += carte.Points(SansAtout)
+		total[ToutAtout] += carte.Points(SansAtout)
 	}
 
 	for atout, points := range total {
@@ -278,11 +277,12 @@ func TestPoints162(t *testing.T) {
 
 func TestCouper(t *testing.T) {
 
-	paquet := src.NouveauPaquet32()
+	cp := RandomCoupeur{}
+	paquet := NouveauPaquet32()
 
 	p1 := paquet.Cartes
 
-	paquet.Couper()
+	paquet = cp.Couper(paquet)
 
 	p2 := paquet.Cartes
 

@@ -1,4 +1,4 @@
-package src
+package coinche
 
 import "fmt"
 
@@ -14,11 +14,12 @@ type Joueur struct {
 }
 
 type Partie struct {
-	Equipe1   Equipe
-	Equipe2   Equipe
+	Equipe1   *Equipe
+	Equipe2   *Equipe
 	Paquet    CarteCollection
 	Menes     []Mene
 	Melangeur Melangeur
+	Coupeur   Coupeur
 }
 
 type Contrat struct {
@@ -61,6 +62,16 @@ type Mene struct {
 	pliEnCours Pli
 }
 
+func (m Mene) Terminée() bool {
+	nb := 0
+
+	for _, p := range m.Plis {
+		nb += len(p)
+	}
+
+	return nb >= 8
+}
+
 func (m *Mene) Annonce(e *Equipe, c Contrat) error {
 	if m.Contrat.ValeurAnnonce >= c.ValeurAnnonce {
 		return fmt.Errorf("Annonce %v doit être supérieure à %v", c.ValeurAnnonce, m.Contrat.ValeurAnnonce)
@@ -74,12 +85,12 @@ func (m *Mene) Annonce(e *Equipe, c Contrat) error {
 
 func NouvellePartie(j1 Joueur, j2 Joueur, j3 Joueur, j4 Joueur) Partie {
 	p := Partie{
-		Equipe{
+		&Equipe{
 			J1:    &j1,
 			J2:    &j2,
 			Score: 0,
 		},
-		Equipe{
+		&Equipe{
 			J1:    &j3,
 			J2:    &j4,
 			Score: 0,
@@ -87,6 +98,7 @@ func NouvellePartie(j1 Joueur, j2 Joueur, j3 Joueur, j4 Joueur) Partie {
 		NouveauPaquet32(),
 		[]Mene{},
 		&FischerYatesMelangeur{},
+		RandomCoupeur{},
 	}
 
 	p.Paquet = p.Melangeur.Melanger(p.Paquet)
@@ -97,8 +109,8 @@ func NouvellePartie(j1 Joueur, j2 Joueur, j3 Joueur, j4 Joueur) Partie {
 func (p *Partie) Score() map[*Equipe]int {
 	s := make(map[*Equipe]int)
 
-	s[&p.Equipe1] = 0
-	s[&p.Equipe2] = 0
+	s[p.Equipe1] = 0
+	s[p.Equipe2] = 0
 
 	for _, mene := range p.Menes {
 		for equipe, plis := range mene.Plis {
@@ -113,10 +125,10 @@ func (p *Partie) Score() map[*Equipe]int {
 
 func (p *Partie) EquipeDe(j *Joueur) *Equipe {
 	if p.Equipe1.J1 == j || p.Equipe1.J2 == j {
-		return &p.Equipe1
+		return p.Equipe1
 	}
 	if p.Equipe2.J1 == j || p.Equipe2.J2 == j {
-		return &p.Equipe2
+		return p.Equipe2
 	}
 	return nil
 }
@@ -126,7 +138,7 @@ func (p *Partie) Joueurs() []*Joueur {
 }
 
 func (p *Partie) NouvelleDonne() {
-	p.Paquet.Couper()
+	p.Paquet = p.Coupeur.Couper(p.Paquet)
 	js := p.Joueurs()
 
 	js[0].Main.Cartes = append(js[0].Main.Cartes, p.Paquet.Tirer(3)...)
@@ -154,6 +166,11 @@ func (p *Partie) JoueCarte(joueur *Joueur, carte Carte) error {
 	}
 
 	m := &p.Menes[len(p.Menes)-1]
+
+	if m.Terminée() {
+		return fmt.Errorf("mène terminée")
+	}
+
 	m.pliEnCours.Ajouter(joueur, &c)
 
 	if len(m.pliEnCours.Cartes) == 4 {
@@ -163,6 +180,9 @@ func (p *Partie) JoueCarte(joueur *Joueur, carte Carte) error {
 			m.Plis = make(map[*Equipe][]Pli)
 		}
 		m.Plis[p.EquipeDe(gagnant)] = append(m.Plis[p.EquipeDe(gagnant)], m.pliEnCours)
+		m.pliEnCours = Pli{
+			Cartes: make(map[*Joueur]*Carte),
+		}
 	}
 
 	return nil

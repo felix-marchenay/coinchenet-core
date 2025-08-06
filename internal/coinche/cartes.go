@@ -1,4 +1,4 @@
-package src
+package coinche
 
 import (
 	"fmt"
@@ -126,6 +126,23 @@ func (f *FischerYatesMelangeur) Melanger(cc CarteCollection) CarteCollection {
 	return cc
 }
 
+type Coupeur interface {
+	Couper(CarteCollection) CarteCollection
+}
+
+type RandomCoupeur struct{}
+
+func (RandomCoupeur) Couper(in CarteCollection) (out CarteCollection) {
+
+	r := rand.Intn(len(in.Cartes)-1) + 1
+	out.Cartes = append(out.Cartes, in.Cartes[r:]...)
+	out.Cartes = append(out.Cartes, in.Cartes[:r]...)
+
+	in.Cartes = out.Cartes
+
+	return
+}
+
 func (c *Carte) Bat(c2 *Carte, atout Atout, couleurDemandee Couleur) bool {
 	ordreSansAtout := map[Valeur]int{Sept: 1, Huit: 2, Neuf: 3, Dix: 4, Valet: 5, Dame: 6, Roi: 7, As: 8}
 	ordreAtout := map[Valeur]int{Sept: 100, Huit: 200, Dame: 300, Roi: 400, Dix: 500, As: 600, Neuf: 700, Valet: 800}
@@ -195,15 +212,6 @@ func NouveauPaquet32() CarteCollection {
 		}
 	}
 	return CarteCollection{Cartes: cartes}
-}
-
-func (p *CarteCollection) Couper() {
-	var c CarteCollection
-	r := rand.Intn(len(p.Cartes)-1) + 1
-	c.Cartes = append(c.Cartes, p.Cartes[r:]...)
-	c.Cartes = append(c.Cartes, p.Cartes[:r]...)
-
-	p.Cartes = c.Cartes
 }
 
 func (cc *CarteCollection) Pop(carte Carte) (Carte, error) {

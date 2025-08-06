@@ -1,8 +1,17 @@
-package src
+package coinche
 
 type Pli struct {
 	Cartes        map[*Joueur]*Carte
 	PremierJoueur *Joueur
+}
+
+func (p Pli) SCartes() (cc CarteCollection) {
+
+	for _, c := range p.Cartes {
+		cc.Cartes = append(cc.Cartes, *c)
+	}
+
+	return
 }
 
 func (p *Pli) Ajouter(j *Joueur, c *Carte) {
