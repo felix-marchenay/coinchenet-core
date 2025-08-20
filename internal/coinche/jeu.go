@@ -1,6 +1,8 @@
 package coinche
 
-import "fmt"
+import (
+	"fmt"
+)
 
 type Equipe struct {
 	J1    *Joueur
@@ -72,6 +74,16 @@ func (m Mene) Terminée() bool {
 	return nb >= 8
 }
 
+func (m Mene) Démarrée() bool {
+	nb := 0
+
+	for _, p := range m.Plis {
+		nb += len(p)
+	}
+
+	return nb > 0
+}
+
 func (m *Mene) Annonce(e *Equipe, c Contrat) error {
 	if m.Contrat.ValeurAnnonce >= c.ValeurAnnonce {
 		return fmt.Errorf("Annonce %v doit être supérieure à %v", c.ValeurAnnonce, m.Contrat.ValeurAnnonce)
@@ -130,15 +142,39 @@ func (p *Partie) EquipeDe(j *Joueur) *Equipe {
 	if p.Equipe2.J1 == j || p.Equipe2.J2 == j {
 		return p.Equipe2
 	}
-	return nil
+
+	panic("équipe introuvable")
 }
 
 func (p *Partie) Joueurs() []*Joueur {
 	return []*Joueur{p.Equipe1.J1, p.Equipe1.J2, p.Equipe2.J1, p.Equipe2.J2}
 }
 
-func (p *Partie) NouvelleDonne() {
+func (p *Partie) NouvelleMene() error {
+
+	if len(p.Menes) > 0 {
+		m := p.Menes[len(p.Menes)-1]
+
+		if !m.Terminée() {
+			return fmt.Errorf("impossible de lancer une nouvelle mène si la dernière n'est pas terminée")
+		}
+
+		cc := CarteCollection{}
+
+		for _, c := range m.Plis[p.Equipe1] {
+			cc.Cartes = append(cc.Cartes, c.SCartes().Cartes...)
+		}
+		for _, c := range m.Plis[p.Equipe2] {
+			cc.Cartes = append(cc.Cartes, c.SCartes().Cartes...)
+		}
+
+		p.Paquet = cc
+	}
+
+	p.Menes = append(p.Menes, Mene{})
+
 	p.Paquet = p.Coupeur.Couper(p.Paquet)
+
 	js := p.Joueurs()
 
 	js[0].Main.Cartes = append(js[0].Main.Cartes, p.Paquet.Tirer(3)...)
@@ -155,6 +191,8 @@ func (p *Partie) NouvelleDonne() {
 	js[1].Main.Cartes = append(js[1].Main.Cartes, p.Paquet.Tirer(3)...)
 	js[2].Main.Cartes = append(js[2].Main.Cartes, p.Paquet.Tirer(3)...)
 	js[3].Main.Cartes = append(js[3].Main.Cartes, p.Paquet.Tirer(3)...)
+
+	return nil
 }
 
 func (p *Partie) JoueCarte(joueur *Joueur, carte Carte) error {
@@ -181,9 +219,25 @@ func (p *Partie) JoueCarte(joueur *Joueur, carte Carte) error {
 		}
 		m.Plis[p.EquipeDe(gagnant)] = append(m.Plis[p.EquipeDe(gagnant)], m.pliEnCours)
 		m.pliEnCours = Pli{
-			Cartes: make(map[*Joueur]*Carte),
+			Cartes: make(map[*Joueur]Carte),
 		}
 	}
+
+	return nil
+}
+
+func (p *Partie) Annonce(j *Joueur, c Contrat) error {
+	if len(p.Menes) == 0 {
+		return fmt.Errorf("impossible de miser sans mène")
+	}
+
+	m := p.Menes[len(p.Menes)-1]
+
+	if m.Démarrée() {
+		return fmt.Errorf("impossible de miser sur une mène démarée")
+	}
+
+	m.Annonce(p.EquipeDe(j), c)
 
 	return nil
 }

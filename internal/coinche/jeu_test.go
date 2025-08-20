@@ -1,6 +1,7 @@
 package coinche
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -32,7 +33,7 @@ func TestNouvellePartie(t *testing.T) {
 
 	assert.Len(t, partie.Paquet.Cartes, 32, "Le paquet doit contenir 32 cartes au début")
 
-	partie.NouvelleDonne()
+	partie.NouvelleMene()
 
 	assert.Len(t, partie.Paquet.Cartes, 0, "Le paquet doit être vide après distribution")
 	assert.Len(t, partie.Equipe1.J1.Main.Cartes, 8)
@@ -40,66 +41,43 @@ func TestNouvellePartie(t *testing.T) {
 	assert.Len(t, partie.Equipe2.J1.Main.Cartes, 8)
 	assert.Len(t, partie.Equipe2.J2.Main.Cartes, 8)
 
-	m := Mene{}
+	partie.Annonce(partie.Equipe1.J1, Contrat{AtoutCarreau, A100})
+	partie.Annonce(partie.Equipe1.J2, Contrat{AtoutCarreau, A110})
+	partie.Annonce(partie.Equipe1.J1, Contrat{AtoutCarreau, Capot})
 
-	annonces := []Contrat{
-		{ValeurAnnonce: A100, Couleur: AtoutCarreau},
-		{ValeurAnnonce: A110, Couleur: AtoutCarreau},
-		{ValeurAnnonce: Capot, Couleur: AtoutTrefle},
+	for range 8 {
+		partie.JoueCarte(partie.Equipe1.J1, partie.Equipe1.J1.Main.Cartes[0])
+		partie.JoueCarte(partie.Equipe1.J2, partie.Equipe1.J2.Main.Cartes[0])
+		partie.JoueCarte(partie.Equipe2.J1, partie.Equipe2.J1.Main.Cartes[0])
+		partie.JoueCarte(partie.Equipe2.J2, partie.Equipe2.J2.Main.Cartes[0])
 	}
 
-	for _, annonce := range annonces {
-		err := m.Annonce(partie.Equipe1, annonce)
-		if err != nil {
-			t.Errorf("Erreur lors de l'annonce: %v", err)
-		}
-	}
+	err := partie.JoueCarte(partie.Equipe1.J1, Carte{Coeur, Valet})
 
-	partie.Menes = append(partie.Menes, m)
+	assert.Equal(t, "impossible de jouer la carte : carte {0 4} non trouvée", err.Error())
 
-	partie.JoueCarte(partie.Equipe1.J1, partie.Equipe1.J1.Main.Cartes[0])
-	partie.JoueCarte(partie.Equipe1.J2, partie.Equipe1.J2.Main.Cartes[0])
-	partie.JoueCarte(partie.Equipe2.J1, partie.Equipe2.J1.Main.Cartes[0])
-	partie.JoueCarte(partie.Equipe2.J2, partie.Equipe2.J2.Main.Cartes[0])
-
-	partie.JoueCarte(partie.Equipe1.J1, partie.Equipe1.J1.Main.Cartes[0])
-	partie.JoueCarte(partie.Equipe1.J2, partie.Equipe1.J2.Main.Cartes[0])
-	partie.JoueCarte(partie.Equipe2.J1, partie.Equipe2.J1.Main.Cartes[0])
-	partie.JoueCarte(partie.Equipe2.J2, partie.Equipe2.J2.Main.Cartes[0])
-
-	partie.JoueCarte(partie.Equipe1.J1, partie.Equipe1.J1.Main.Cartes[0])
-	partie.JoueCarte(partie.Equipe1.J2, partie.Equipe1.J2.Main.Cartes[0])
-	partie.JoueCarte(partie.Equipe2.J1, partie.Equipe2.J1.Main.Cartes[0])
-	partie.JoueCarte(partie.Equipe2.J2, partie.Equipe2.J2.Main.Cartes[0])
-
-	partie.JoueCarte(partie.Equipe1.J1, partie.Equipe1.J1.Main.Cartes[0])
-	partie.JoueCarte(partie.Equipe1.J2, partie.Equipe1.J2.Main.Cartes[0])
-	partie.JoueCarte(partie.Equipe2.J1, partie.Equipe2.J1.Main.Cartes[0])
-	partie.JoueCarte(partie.Equipe2.J2, partie.Equipe2.J2.Main.Cartes[0])
-
-	partie.JoueCarte(partie.Equipe1.J1, partie.Equipe1.J1.Main.Cartes[0])
-	partie.JoueCarte(partie.Equipe1.J2, partie.Equipe1.J2.Main.Cartes[0])
-	partie.JoueCarte(partie.Equipe2.J1, partie.Equipe2.J1.Main.Cartes[0])
-	partie.JoueCarte(partie.Equipe2.J2, partie.Equipe2.J2.Main.Cartes[0])
-
-	partie.JoueCarte(partie.Equipe1.J1, partie.Equipe1.J1.Main.Cartes[0])
-	partie.JoueCarte(partie.Equipe1.J2, partie.Equipe1.J2.Main.Cartes[0])
-	partie.JoueCarte(partie.Equipe2.J1, partie.Equipe2.J1.Main.Cartes[0])
-	partie.JoueCarte(partie.Equipe2.J2, partie.Equipe2.J2.Main.Cartes[0])
-
-	partie.JoueCarte(partie.Equipe1.J1, partie.Equipe1.J1.Main.Cartes[0])
-	partie.JoueCarte(partie.Equipe1.J2, partie.Equipe1.J2.Main.Cartes[0])
-	partie.JoueCarte(partie.Equipe2.J1, partie.Equipe2.J1.Main.Cartes[0])
-	partie.JoueCarte(partie.Equipe2.J2, partie.Equipe2.J2.Main.Cartes[0])
-
-	partie.JoueCarte(partie.Equipe1.J1, partie.Equipe1.J1.Main.Cartes[0])
-	partie.JoueCarte(partie.Equipe1.J2, partie.Equipe1.J2.Main.Cartes[0])
-	partie.JoueCarte(partie.Equipe2.J1, partie.Equipe2.J1.Main.Cartes[0])
-	partie.JoueCarte(partie.Equipe2.J2, partie.Equipe2.J2.Main.Cartes[0])
+	assert.Len(t, partie.Menes, 1)
 
 	assert.Len(t, partie.Menes[0].Plis[&e1], 5)
 	assert.Len(t, partie.Menes[0].Plis[&e2], 3)
 
-	assert.Equal(t, 84, partie.Score()[&e1])
-	assert.Equal(t, 68, partie.Score()[&e2])
+	assert.Equal(t, 80, partie.Score()[&e1])
+	assert.Equal(t, 72, partie.Score()[&e2])
+
+	partie.NouvelleMene()
+
+	assert.Len(t, partie.Menes, 2)
+
+	partie.Annonce(e1.J1, Contrat{AtoutPique, A80})
+	partie.Annonce(e2.J1, Contrat{AtoutCoeur, A90})
+	partie.Annonce(e1.J2, Contrat{AtoutPique, A120})
+
+	fmt.Println(SerializeCarte(partie.Equipe1.J1.Main.Cartes[0]))
+	fmt.Println(SerializeCarte(partie.Equipe1.J2.Main.Cartes[0]))
+	for range 8 {
+		partie.JoueCarte(partie.Equipe1.J1, partie.Equipe1.J1.Main.Cartes[0])
+		partie.JoueCarte(partie.Equipe1.J2, partie.Equipe1.J2.Main.Cartes[0])
+		partie.JoueCarte(partie.Equipe2.J1, partie.Equipe2.J1.Main.Cartes[0])
+		partie.JoueCarte(partie.Equipe2.J2, partie.Equipe2.J2.Main.Cartes[0])
+	}
 }

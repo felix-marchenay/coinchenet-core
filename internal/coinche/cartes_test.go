@@ -1,59 +1,10 @@
 package coinche
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
-
-func SerializePaquet(p CarteCollection) string {
-	var result string
-	for _, carte := range p.Cartes {
-		result += SerializeCarte(carte) + ", "
-	}
-	return "Paquet{" + result + "}\n"
-}
-
-func SerializeCarte(c Carte) string {
-	cstr := ""
-	switch c.Couleur {
-	case Coeur:
-		cstr = "Coeur"
-	case Carreau:
-		cstr = "Carreau"
-	case Trefle:
-		cstr = "Trefle"
-	case Pique:
-		cstr = "Pique"
-	default:
-		cstr = "-"
-	}
-
-	vstr := ""
-	switch c.Valeur {
-	case Sept:
-		vstr = "Sept"
-	case Huit:
-		vstr = "Huit"
-	case Neuf:
-		vstr = "Neuf"
-	case Dix:
-		vstr = "Dix"
-	case Valet:
-		vstr = "Valet"
-	case Dame:
-		vstr = "Dame"
-	case Roi:
-		vstr = "Roi"
-	case As:
-		vstr = "As"
-	default:
-		vstr = "Inconnu"
-	}
-
-	return fmt.Sprintf("%s %s", vstr, cstr)
-}
 
 func TestNouveauPaquet32(t *testing.T) {
 
@@ -104,7 +55,7 @@ func TestTirer(t *testing.T) {
 
 func TestPliRemporte_Provider(t *testing.T) {
 	type args struct {
-		cartes        map[*Joueur]*Carte
+		cartes        map[*Joueur]Carte
 		premierJoueur *Joueur
 		atout         Atout
 	}
@@ -121,7 +72,7 @@ func TestPliRemporte_Provider(t *testing.T) {
 		{
 			name: "Sans atout, couleur demandée gagne",
 			args: args{
-				cartes: map[*Joueur]*Carte{
+				cartes: map[*Joueur]Carte{
 					j1: {Couleur: Coeur, Valeur: Dix},
 					j2: {Couleur: Coeur, Valeur: As},
 					j3: {Couleur: Trefle, Valeur: Roi},
@@ -135,7 +86,7 @@ func TestPliRemporte_Provider(t *testing.T) {
 		{
 			name: "Atout gagne sur couleur demandée",
 			args: args{
-				cartes: map[*Joueur]*Carte{
+				cartes: map[*Joueur]Carte{
 					j1: {Couleur: Coeur, Valeur: Dix},
 					j2: {Couleur: Carreau, Valeur: As},
 					j3: {Couleur: Coeur, Valeur: Valet},
@@ -149,7 +100,7 @@ func TestPliRemporte_Provider(t *testing.T) {
 		{
 			name: "Premier joueur gagne si tous jouent même couleur",
 			args: args{
-				cartes: map[*Joueur]*Carte{
+				cartes: map[*Joueur]Carte{
 					j1: {Couleur: Trefle, Valeur: Roi},
 					j2: {Couleur: Trefle, Valeur: Dame},
 					j3: {Couleur: Trefle, Valeur: Valet},
@@ -163,7 +114,7 @@ func TestPliRemporte_Provider(t *testing.T) {
 		{
 			name: "Valet d'atout coupe",
 			args: args{
-				cartes: map[*Joueur]*Carte{
+				cartes: map[*Joueur]Carte{
 					j1: {Couleur: Trefle, Valeur: Roi},
 					j2: {Couleur: Trefle, Valeur: Dame},
 					j3: {Couleur: Trefle, Valeur: Valet},
@@ -177,7 +128,7 @@ func TestPliRemporte_Provider(t *testing.T) {
 		{
 			name: "ToutAtout, plus forte valeur gagne",
 			args: args{
-				cartes: map[*Joueur]*Carte{
+				cartes: map[*Joueur]Carte{
 					j1: {Couleur: Coeur, Valeur: Valet},
 					j2: {Couleur: Coeur, Valeur: Neuf},
 					j3: {Couleur: Pique, Valeur: Valet},
@@ -191,7 +142,7 @@ func TestPliRemporte_Provider(t *testing.T) {
 		{
 			name: "Premier tour classique, on fait tomber les atouts",
 			args: args{
-				cartes: map[*Joueur]*Carte{
+				cartes: map[*Joueur]Carte{
 					j1: {Couleur: Coeur, Valeur: Valet},
 					j2: {Couleur: Coeur, Valeur: Neuf},
 					j3: {Couleur: Coeur, Valeur: Sept},
@@ -205,7 +156,7 @@ func TestPliRemporte_Provider(t *testing.T) {
 		{
 			name: "Personne ne fournit, personne ne coupe",
 			args: args{
-				cartes: map[*Joueur]*Carte{
+				cartes: map[*Joueur]Carte{
 					j1: {Couleur: Carreau, Valeur: As},
 					j2: {Couleur: Carreau, Valeur: Dix},
 					j3: {Couleur: Coeur, Valeur: As},
@@ -219,7 +170,7 @@ func TestPliRemporte_Provider(t *testing.T) {
 		{
 			name: "Coupé par un atout, mais pas le premier joueur",
 			args: args{
-				cartes: map[*Joueur]*Carte{
+				cartes: map[*Joueur]Carte{
 					j1: {Couleur: Carreau, Valeur: As},
 					j2: {Couleur: Carreau, Valeur: Dix},
 					j3: {Couleur: Pique, Valeur: As},
@@ -233,7 +184,7 @@ func TestPliRemporte_Provider(t *testing.T) {
 		{
 			name: "Aucun pli, retourne nil",
 			args: args{
-				cartes:        map[*Joueur]*Carte{},
+				cartes:        map[*Joueur]Carte{},
 				premierJoueur: j1,
 				atout:         SansAtout,
 			},

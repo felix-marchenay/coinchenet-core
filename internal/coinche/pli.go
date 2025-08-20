@@ -1,14 +1,14 @@
 package coinche
 
 type Pli struct {
-	Cartes        map[*Joueur]*Carte
+	Cartes        map[*Joueur]Carte
 	PremierJoueur *Joueur
 }
 
 func (p Pli) SCartes() (cc CarteCollection) {
 
 	for _, c := range p.Cartes {
-		cc.Cartes = append(cc.Cartes, *c)
+		cc.Cartes = append(cc.Cartes, c)
 	}
 
 	return
@@ -24,10 +24,10 @@ func (p *Pli) Ajouter(j *Joueur, c *Carte) {
 	}
 
 	if p.Cartes == nil {
-		p.Cartes = make(map[*Joueur]*Carte)
+		p.Cartes = make(map[*Joueur]Carte)
 	}
 
-	p.Cartes[j] = c
+	p.Cartes[j] = *c
 }
 
 func (p Pli) Remporte(a Atout) (g *Joueur) {
@@ -41,7 +41,7 @@ func (p Pli) Remporte(a Atout) (g *Joueur) {
 
 	for j, c := range p.Cartes {
 		if b == nil || c.Bat(b, a, couleurDemandee) {
-			b = c
+			b = &c
 			g = j
 		}
 	}
