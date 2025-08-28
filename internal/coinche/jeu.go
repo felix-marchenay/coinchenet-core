@@ -15,6 +15,82 @@ type Joueur struct {
 	Main CarteCollection
 }
 
+func (j *Joueur) PeutJouer(carte Carte, p Pli, atout Atout) bool {
+	trouvee := false
+	aAtout := false
+	aCouleurDemandee := false
+	var plusHauteCarteAtoutDuPli *Carte = nil
+	var plusHauteCarteAtoutDeLaMain *Carte = nil
+
+	_, pliDemarre := p.Cartes[p.PremierJoueur]
+
+	// si plusHauteValeurAtout reste à -1 c'est qu'aucun atout n'a été joué dans ce pli
+	for _, cj := range p.Cartes {
+		if cj.Couleur == Couleur(atout) || atout == ToutAtout {
+			if plusHauteCarteAtoutDuPli == nil {
+				plusHauteCarteAtoutDuPli = &cj
+				continue
+			}
+
+			if cj.Bat(plusHauteCarteAtoutDuPli, atout, Couleur(atout)) {
+				plusHauteCarteAtoutDuPli = &cj
+			}
+		}
+	}
+
+	for _, c := range j.Main.Cartes {
+
+		if c == carte {
+			trouvee = true
+		}
+		if c.Couleur == Couleur(atout) || atout == ToutAtout {
+			if plusHauteCarteAtoutDeLaMain == nil || c.Bat(plusHauteCarteAtoutDeLaMain, atout, Couleur(atout)) {
+				plusHauteCarteAtoutDeLaMain = &c
+			}
+		}
+		if !pliDemarre {
+			continue
+		}
+		if c.Couleur == p.Cartes[p.PremierJoueur].Couleur {
+			aCouleurDemandee = true
+		}
+	}
+
+	aAtout = plusHauteCarteAtoutDeLaMain != nil
+
+	if !trouvee {
+		return false
+	}
+
+	if !pliDemarre {
+		return true
+	}
+
+	couleurDemandee := p.Cartes[p.PremierJoueur].Couleur
+
+	// Si c'est la couleur demandée on peut la jouer
+	if carte.Couleur == couleurDemandee {
+
+		// Si on a un atout supérieur et que c'est de l'atout demandé, il faut monter si on peut
+		if (couleurDemandee == Couleur(atout) || atout == ToutAtout) && aAtout && plusHauteCarteAtoutDuPli.Bat(&carte, atout, Couleur(atout)) && plusHauteCarteAtoutDeLaMain.Bat(plusHauteCarteAtoutDuPli, atout, couleurDemandee) {
+			return false
+		}
+
+		return true
+	}
+
+	// on a la couleur demandée mais cette carte n'en est pas
+	if aCouleurDemandee {
+		return false
+	}
+
+	if aAtout && carte.Couleur != Couleur(atout) {
+		return false
+	}
+
+	return true
+}
+
 type Partie struct {
 	Equipe1   *Equipe
 	Equipe2   *Equipe
@@ -55,45 +131,6 @@ const (
 	Capot    ValeurAnnonce = 250
 	Generale ValeurAnnonce = 500
 )
-
-type Mene struct {
-	Contrat  Contrat
-	Preneuse *Equipe
-
-	Plis       map[*Equipe][]Pli
-	pliEnCours Pli
-}
-
-func (m Mene) Terminée() bool {
-	nb := 0
-
-	for _, p := range m.Plis {
-		nb += len(p)
-	}
-
-	return nb >= 8
-}
-
-func (m Mene) Démarrée() bool {
-	nb := 0
-
-	for _, p := range m.Plis {
-		nb += len(p)
-	}
-
-	return nb > 0
-}
-
-func (m *Mene) Annonce(e *Equipe, c Contrat) error {
-	if m.Contrat.ValeurAnnonce >= c.ValeurAnnonce {
-		return fmt.Errorf("Annonce %v doit être supérieure à %v", c.ValeurAnnonce, m.Contrat.ValeurAnnonce)
-	}
-
-	m.Contrat = c
-	m.Preneuse = e
-
-	return nil
-}
 
 func NouvellePartie(j1 Joueur, j2 Joueur, j3 Joueur, j4 Joueur) Partie {
 	p := Partie{
@@ -197,13 +234,17 @@ func (p *Partie) NouvelleMene() error {
 
 func (p *Partie) JoueCarte(joueur *Joueur, carte Carte) error {
 
+	m := &p.Menes[len(p.Menes)-1]
+
+	if !joueur.PeutJouer(carte, m.pliEnCours, m.Contrat.Couleur) {
+		return fmt.Errorf("carte interdite")
+	}
+
 	c, err := joueur.Main.Pop(carte)
 
 	if err != nil {
 		return fmt.Errorf("impossible de jouer la carte : %w", err)
 	}
-
-	m := &p.Menes[len(p.Menes)-1]
 
 	if m.Terminée() {
 		return fmt.Errorf("mène terminée")
@@ -231,7 +272,7 @@ func (p *Partie) Annonce(j *Joueur, c Contrat) error {
 		return fmt.Errorf("impossible de miser sans mène")
 	}
 
-	m := p.Menes[len(p.Menes)-1]
+	m := &p.Menes[len(p.Menes)-1]
 
 	if m.Démarrée() {
 		return fmt.Errorf("impossible de miser sur une mène démarée")
