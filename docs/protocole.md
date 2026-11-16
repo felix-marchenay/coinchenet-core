@@ -85,7 +85,8 @@ Chaque message, dans les deux sens, a la forme `{"type": "...", "ref": "optionne
 
 Le serveur commence par `bienvenue` : `{"joueur": {id, pseudo, elo}, "connexion": "<id>"}`. Il n'y a ensuite rien à faire pour se reconnecter :
 - si le joueur a une partie en cours, la connexion la rejoint automatiquement et reçoit `partie.etat` ;
-- s'il est dans la file classée, il reçoit `file.rejointe`, ou `file.trouvee` puis `file.acceptation` si une table l'attend.
+- s'il est dans la file classée, il reçoit `file.rejointe`, ou `file.trouvee` puis `file.acceptation` si une table l'attend ;
+- s'il a des invitations de duo en attente, il reçoit `duo.invitation` pour chaque invitation reçue et `duo.envoyee` pour chaque invitation envoyée.
 
 Limites :
 - 10 messages par seconde et par connexion, avec des pointes jusqu'à 20 ; au-delà, le serveur répond `trop_de_requetes` ;

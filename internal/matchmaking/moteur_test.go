@@ -243,6 +243,27 @@ func TestEtatALaReconnexion(t *testing.T) {
 	assert.Equal(t, []string{MsgTrouvee, MsgAcceptation}, types(e, js[2].ID))
 }
 
+func TestEtatRenvoieLesInvitationsEnAttente(t *testing.T) {
+	m := moteurDeTest()
+	js := joueurs(3)
+	alice, bob, carole := js[0], js[1], js[2]
+	e := m.Appliquer(Commande{Type: CmdInviter, Joueur: alice, Invite: &bob}, t0)
+	envoyee := donnees[MessageInvitation](t, e, alice.ID, MsgEnvoyee)
+	e = m.Appliquer(Commande{Type: CmdInviter, Joueur: carole, Invite: &alice}, t0)
+	recue := donnees[MessageInvitation](t, e, alice.ID, MsgInvitation)
+
+	e = m.Appliquer(Commande{Type: CmdEtat, Joueur: alice}, t0.Add(time.Second))
+
+	assert.ElementsMatch(t, []string{MsgEnvoyee, MsgInvitation}, types(e, alice.ID))
+	assert.Equal(t, envoyee, donnees[MessageInvitation](t, e, alice.ID, MsgEnvoyee))
+	assert.Equal(t, recue, donnees[MessageInvitation](t, e, alice.ID, MsgInvitation))
+	assert.Empty(t, types(e, bob.ID), "seul le joueur qui se reconnecte est notifié")
+	assert.False(t, e.Modifie)
+
+	e = m.Appliquer(Commande{Type: CmdEtat, Joueur: bob}, t0.Add(time.Second))
+	assert.Equal(t, []string{MsgInvitation}, types(e, bob.ID))
+}
+
 func TestCommandeInconnue(t *testing.T) {
 	m := moteurDeTest()
 	j := joueurs(1)[0]
