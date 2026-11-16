@@ -63,6 +63,7 @@ type EtatTable struct {
 	Echeance *time.Time                   `json:"echeance,omitempty"`
 	Jeu      *coinche.Vue                 `json:"jeu,omitempty"`
 	Fin      *FinPartie                   `json:"fin,omitempty"`
+	Chat     []Chat                       `json:"chat"`
 }
 
 type MessageDonne struct {

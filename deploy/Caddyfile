@@ -2,17 +2,38 @@
 {$COINCHE_DOMAINE} {
 	encode zstd gzip
 
+	@api path /sante /pret /version /regles /moi /joueurs /joueurs/* /classement /parties/* /tables /ws /auth/*
+
 	# Les métriques et le profilage (port 9090) ne sont jamais exposés.
-	reverse_proxy {
-		dynamic a {
-			name serveur
-			port 8080
-			refresh 5s
+	handle @api {
+		reverse_proxy {
+			dynamic a {
+				name serveur
+				port 8080
+				refresh 5s
+			}
+			lb_policy least_conn
+			lb_try_duration 5s
+			fail_duration 30s
+			header_up X-Forwarded-For {remote_host}
 		}
-		lb_policy least_conn
-		lb_try_duration 5s
-		fail_duration 30s
-		header_up X-Forwarded-For {remote_host}
+	}
+
+	# Client web : le build monté depuis COINCHE_WEB.
+	root * /srv/web
+
+	handle /assets/* {
+		# Pas de cache long sur une 404 : le fichier peut arriver avec le déploiement suivant.
+		@present file
+		header @present Cache-Control "public, max-age=31536000, immutable"
+		file_server
+	}
+
+	# Les autres routes sont celles du client : index.html.
+	handle {
+		header Cache-Control "no-cache"
+		try_files {path} /index.html
+		file_server
 	}
 
 	log {

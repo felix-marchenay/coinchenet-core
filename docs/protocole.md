@@ -85,7 +85,8 @@ Chaque message, dans les deux sens, a la forme `{"type": "...", "ref": "optionne
 
 Le serveur commence par `bienvenue` : `{"joueur": {id, pseudo, elo}, "connexion": "<id>"}`. Il n'y a ensuite rien à faire pour se reconnecter :
 - si le joueur a une partie en cours, la connexion la rejoint automatiquement et reçoit `partie.etat` ;
-- s'il est dans la file classée, il reçoit `file.rejointe`, ou `file.trouvee` puis `file.acceptation` si une table l'attend.
+- s'il est dans la file classée, il reçoit `file.rejointe`, ou `file.trouvee` puis `file.acceptation` si une table l'attend ;
+- s'il a des invitations de duo en attente, il reçoit `duo.invitation` pour chaque invitation reçue et `duo.envoyee` pour chaque invitation envoyée.
 
 Limites :
 - 10 messages par seconde et par connexion, avec des pointes jusqu'à 20 ; au-delà, le serveur répond `trop_de_requetes` ;
@@ -125,7 +126,7 @@ Les messages de partie portent `table` (uuid) et `seq`, le numéro de l'événem
 
 | Type | Données principales |
 |---|---|
-| `partie.etat` | Instantané complet : `type`, `statut` (`attente`, `en_cours`, `terminee`), `code`, `createur`, `options`, `sieges[4]` (`joueur`, `bot`, `statut`, `retour_avant`), `moi`, `echeance` et `jeu`. `jeu` contient : `scores`, `historique`, ma `main`, et la mène en cours dans `mene` (`phase`, `tour`, `donneur`, `encheres`, `contrat`, `preneur`, `multiplicateur`, `pli_en_cours`, `plis`, `nb_cartes`, `belote` une fois annoncée, et pour le joueur dont c'est le tour, `cartes_jouables` ou `options_enchere`). |
+| `partie.etat` | Instantané complet : `type`, `statut` (`attente`, `en_cours`, `terminee`), `code`, `createur`, `options`, `sieges[4]` (`joueur`, `bot`, `statut`, `retour_avant`), `moi`, `echeance`, `chat` et `jeu`. `chat` contient les 50 derniers messages de la table, salon compris, du plus ancien au plus récent, au format de `partie.chat` (`{siege, pseudo, texte}` ou `{siege, pseudo, message}`) ; il vaut `[]` s'il n'y en a pas. Après la reprise d'une partie par une autre instance, seuls les messages échangés en partie sont conservés. `jeu` contient : `scores`, `historique`, ma `main`, et la mène en cours dans `mene` (`phase`, `tour`, `donneur`, `encheres`, `contrat`, `preneur`, `multiplicateur`, `pli_en_cours`, `plis`, `nb_cartes`, `belote` une fois annoncée, et pour le joueur dont c'est le tour, `cartes_jouables` ou `options_enchere`). |
 | `partie.commencee` | `{table, type}` : une partie démarre (ou reprend). La connexion la rejoint d'elle-même. |
 | `partie.donne` | `{mene, donneur, main}` : la main du joueur seulement. |
 | `partie.tour` | `{siege, phase, echeance}`. Le joueur concerné reçoit en plus `cartes_jouables` ou `options_enchere` (`{passe, annonce_min, coinche, surcoinche}`). |

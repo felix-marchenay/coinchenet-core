@@ -128,7 +128,7 @@ Toute la configuration passe par des variables d'environnement.
 
 ## Déploiement
 
-Le dossier [`deploy/`](deploy) contient une stack de production prête à l'emploi : Caddy (HTTPS automatique, WebSocket), deux instances du serveur, Postgres et Redis.
+Le dossier [`deploy/`](deploy) contient une stack de production prête à l'emploi : Caddy (HTTPS automatique, WebSocket, client web), deux instances du serveur, Postgres et Redis.
 
 ```bash
 # Sur un serveur avec Docker, le DNS du domaine pointant vers lui :
@@ -136,6 +136,8 @@ cd deploy
 cp .env.exemple .env      # domaine, mot de passe Postgres, identifiants OAuth
 docker compose up -d
 ```
+
+Caddy sert aussi le client web sur le même domaine : son build (le `dist/` du client) est lu dans `deploy/web`, ou dans le dossier indiqué par `COINCHE_WEB`. Les chemins de l'API (`/auth/*`, `/ws`, `/moi`, `/joueurs`, `/parties/*`, `/classement`…) vont au serveur ; toute autre route renvoie `index.html`.
 
 La CI (GitHub Actions) lance le lint, les tests unitaires et d'intégration, puis une simulation. À chaque push sur `master` et à chaque tag `v*`, elle publie l'image `ghcr.io/felix-marchenay/coinchenet-core`. Si le paquet GHCR est privé, faire un `docker login ghcr.io` sur le serveur, ou rendre le paquet public.
 

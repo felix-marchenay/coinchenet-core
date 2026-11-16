@@ -116,6 +116,14 @@ func (t *Table) rejouer(e Evenement) error {
 		t.statut = StatutTerminee
 		return nil
 
+	case EvtChat:
+		var c Chat
+		if err := e.Decoder(&c); err != nil {
+			return err
+		}
+		t.memoriserChat(c)
+		return nil
+
 	default:
 		return nil
 	}

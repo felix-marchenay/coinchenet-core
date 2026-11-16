@@ -3,6 +3,7 @@ package table
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"testing"
 	"testing/synctest"
 	"time"
@@ -592,6 +593,65 @@ func TestChat(t *testing.T) {
 		synctest.Wait()
 		assert.Contains(t, env.diffuseur.codesErreur(bob.ID), protocole.CodeTropDeRequetes)
 		assert.Contains(t, env.journal.types(tc.table.ID()), EvtChat)
+	})
+}
+
+func TestHistoriqueDuChatAuRechargement(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		env := nouvelEnvironnement()
+		env.cfg.ChatMax = 100
+		alice, bob := joueur("Alice", 1200), joueur("Bob", 1200)
+		tb, err := NouvelleTablePrivee(uuid.New(), alice, "ABCDEF", optionsRapides(), env.deps, env.cfg)
+		require.NoError(t, err)
+		lancerActeur(t, tb)
+		tb.Envoyer(commande(CmdConnexion, alice, "a", nil))
+		tb.Envoyer(commande(CmdConnexion, bob, "b", nil))
+		synctest.Wait()
+		assert.Contains(t, string(env.diffuseur.de(bob.ID, MsgEtat)[0]), `"chat":[]`)
+
+		for i := range tailleHistoriqueChat {
+			tb.Envoyer(commande(CmdChat, alice, "a", DonneesChat{Texte: fmt.Sprintf("salon %d", i)}))
+		}
+		tb.Envoyer(commande(CmdBot, alice, "a", DonneesSiege{Siege: 2}))
+		tb.Envoyer(commande(CmdBot, alice, "a", DonneesSiege{Siege: 3}))
+		tb.Envoyer(commande(CmdLancer, alice, "a", nil))
+		tb.Envoyer(commande(CmdChat, bob, "b", DonneesChat{Texte: "en partie"}))
+		synctest.Wait()
+
+		env.diffuseur.vider(bob.ID)
+		tb.Envoyer(commande(CmdConnexion, bob, "b2", nil))
+		synctest.Wait()
+
+		var etat EtatTable
+		require.True(t, env.diffuseur.dernier(t, bob.ID, MsgEtat, &etat))
+		require.Len(t, etat.Chat, tailleHistoriqueChat, "l'historique est borné")
+		assert.Equal(t, Chat{Siege: 0, Pseudo: "Alice", Texte: "salon 1"}, etat.Chat[0])
+		assert.Equal(t, Chat{Siege: 1, Pseudo: "Bob", Texte: "en partie"}, etat.Chat[tailleHistoriqueChat-1])
+	})
+}
+
+func TestHistoriqueDuChatApresReprise(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		env := nouvelEnvironnement()
+		tc := tableClasseeConnectee(t, env)
+		a1, b1 := tc.joueurs[0], tc.joueurs[1]
+		tc.table.Envoyer(commande(CmdChat, a1, "c-A1", DonneesChat{Message: "bonne_chance"}))
+		tc.table.Envoyer(commande(CmdChat, b1, "c-B1", DonneesChat{Message: "merci"}))
+		synctest.Wait()
+		tc.arreter()
+
+		evts, err := env.journal.Charger(context.Background(), tc.table.ID())
+		require.NoError(t, err)
+		restauree, err := Restaurer(tc.table.ID(), evts, env.deps, env.cfg)
+		require.NoError(t, err)
+		env.diffuseur.vider(b1.ID)
+		lancerActeur(t, restauree)
+		restauree.Envoyer(commande(CmdConnexion, b1, "reprise", nil))
+		synctest.Wait()
+
+		var etat EtatTable
+		require.True(t, env.diffuseur.dernier(t, b1.ID, MsgEtat, &etat))
+		assert.Equal(t, []Chat{{Siege: 0, Pseudo: "A1", Message: "bonne_chance"}, {Siege: 1, Pseudo: "B1", Message: "merci"}}, etat.Chat)
 	})
 }
 

@@ -307,11 +307,18 @@ func (m *Moteur) etat(j table.Joueur, e *Effets) {
 			}
 		}
 		e.notifier(j.ID, MsgRejointe, msg)
-		return
-	}
-	if p := m.propositionDe(j.ID); p != nil {
+	} else if p := m.propositionDe(j.ID); p != nil {
 		e.notifier(j.ID, MsgTrouvee, MessageTrouvee{Proposition: p.ID, ExpireLe: p.ExpireLe, EquipeA: p.EquipeA, EquipeB: p.EquipeB})
 		e.notifier(j.ID, MsgAcceptation, MessageAcceptation{Proposition: p.ID, Acceptes: len(p.Acceptes)})
+	}
+	for _, inv := range m.Etat.Invitations {
+		msg := MessageInvitation{Invitation: inv.ID, De: inv.De, A: inv.A, ExpireLe: inv.ExpireLe}
+		switch j.ID {
+		case inv.A.ID:
+			e.notifier(j.ID, MsgInvitation, msg)
+		case inv.De.ID:
+			e.notifier(j.ID, MsgEnvoyee, msg)
+		}
 	}
 }
 
