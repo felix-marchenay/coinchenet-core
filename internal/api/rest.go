@@ -132,14 +132,9 @@ func (s *Serveur) partiesDuJoueur(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	var avant *time.Time
-	if v := r.URL.Query().Get("avant"); v != "" {
-		t, err := time.Parse(time.RFC3339Nano, v)
-		if err != nil {
-			ecrireErreur(w, http.StatusBadRequest, protocole.CodeRequeteInvalide, "avant doit être une date RFC 3339")
-			return
-		}
-		avant = &t
+	avant, ok := dateAvant(w, r)
+	if !ok {
+		return
 	}
 	parties, err := s.d.Historique.PartiesDuJoueur(r.Context(), id, avant, limite)
 	if err != nil {
@@ -151,6 +146,53 @@ func (s *Serveur) partiesDuJoueur(w http.ResponseWriter, r *http.Request) {
 		reponse["suivant"] = parties[len(parties)-1].Debut.Format(time.RFC3339Nano)
 	}
 	ecrireJSON(w, http.StatusOK, reponse)
+}
+
+// partiesJouees liste toutes les parties terminées, filtrables par type (`type=classee,avec_bots`).
+func (s *Serveur) partiesJouees(w http.ResponseWriter, r *http.Request) {
+	limite, ok := entierBorne(w, r, "limite", 20, 1, 100)
+	if !ok {
+		return
+	}
+	avant, ok := dateAvant(w, r)
+	if !ok {
+		return
+	}
+	var types []string
+	if v := r.URL.Query().Get("type"); v != "" {
+		for t := range strings.SplitSeq(v, ",") {
+			switch table.Type(t) {
+			case table.Classee, table.Privee, table.AvecBots:
+				types = append(types, t)
+			default:
+				ecrireErreur(w, http.StatusBadRequest, protocole.CodeRequeteInvalide, "type doit valoir classee, privee ou avec_bots")
+				return
+			}
+		}
+	}
+	parties, err := s.d.Historique.PartiesJouees(r.Context(), types, avant, limite)
+	if err != nil {
+		s.erreurDonnees(w, err)
+		return
+	}
+	reponse := map[string]any{"parties": parties}
+	if len(parties) == limite {
+		reponse["suivant"] = parties[len(parties)-1].Debut.Format(time.RFC3339Nano)
+	}
+	ecrireJSON(w, http.StatusOK, reponse)
+}
+
+func dateAvant(w http.ResponseWriter, r *http.Request) (*time.Time, bool) {
+	v := r.URL.Query().Get("avant")
+	if v == "" {
+		return nil, true
+	}
+	t, err := time.Parse(time.RFC3339Nano, v)
+	if err != nil {
+		ecrireErreur(w, http.StatusBadRequest, protocole.CodeRequeteInvalide, "avant doit être une date RFC 3339")
+		return nil, false
+	}
+	return &t, true
 }
 
 func (s *Serveur) evolutionElo(w http.ResponseWriter, r *http.Request) {

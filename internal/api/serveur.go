@@ -119,6 +119,7 @@ func NouveauServeur(d Dependances) *Serveur {
 	mux.HandleFunc("GET /joueurs/{id}/parties", s.partiesDuJoueur)
 	mux.HandleFunc("GET /joueurs/{id}/elo", s.evolutionElo)
 	mux.HandleFunc("GET /classement", s.classement)
+	mux.HandleFunc("GET /parties", s.partiesJouees)
 	mux.HandleFunc("GET /parties/{id}", s.partie)
 	mux.HandleFunc("GET /parties/{id}/evenements", s.evenements)
 	mux.HandleFunc("POST /tables", s.authentifie(s.creerTable))

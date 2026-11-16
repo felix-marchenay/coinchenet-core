@@ -47,6 +47,7 @@ type faux struct {
 	file      []matchmaking.Commande
 	abonnes   map[uuid.UUID]func([]byte)
 	creerErr  error
+	types     []string
 }
 
 func nouveauFaux() *faux {
@@ -107,6 +108,20 @@ func (f *faux) PartiesDuJoueur(_ context.Context, _ uuid.UUID, _ *time.Time, lim
 	var res []donnees.ResumePartie
 	for i := range limite {
 		res = append(res, donnees.ResumePartie{ID: uuid.New(), Debut: time.Date(2026, 1, 1, 0, 0, i, 0, time.UTC)})
+	}
+	return res, nil
+}
+
+func (f *faux) PartiesJouees(_ context.Context, types []string, _ *time.Time, limite int) ([]donnees.PartieJouee, error) {
+	f.mu.Lock()
+	f.types = types
+	f.mu.Unlock()
+	var res []donnees.PartieJouee
+	for i := range limite {
+		res = append(res, donnees.PartieJouee{
+			ResumePartie: donnees.ResumePartie{ID: uuid.New(), Debut: time.Date(2026, 1, 1, 0, 0, i, 0, time.UTC)},
+			Menes:        [][2]int{{120, 42}, {120, 204}},
+		})
 	}
 	return res, nil
 }
@@ -372,6 +387,24 @@ func TestJoueurs(t *testing.T) {
 	assert.Equal(t, http.StatusBadRequest, requete(t, s, http.MethodGet, "/joueurs/"+bob.ID.String()+"/parties?avant=hier", nil, "").Code)
 	assert.Equal(t, http.StatusBadRequest, requete(t, s, http.MethodGet, "/joueurs/"+bob.ID.String()+"/parties?limite=0", nil, "").Code)
 	assert.Equal(t, http.StatusOK, requete(t, s, http.MethodGet, "/joueurs/"+bob.ID.String()+"/elo", nil, "").Code)
+}
+
+func TestPartiesJouees(t *testing.T) {
+	f := nouveauFaux()
+	s := serveurDeTest(f)
+
+	w := requete(t, s, http.MethodGet, "/parties?type=classee,avec_bots&limite=2", nil, "")
+	require.Equal(t, http.StatusOK, w.Code)
+	assert.Equal(t, []string{"classee", "avec_bots"}, f.types)
+	assert.Contains(t, w.Body.String(), `"menes":[[120,42],[120,204]]`)
+	assert.Contains(t, w.Body.String(), `"suivant":"2026-01-01T00:00:01Z"`)
+
+	require.Equal(t, http.StatusOK, requete(t, s, http.MethodGet, "/parties", nil, "").Code)
+	assert.Empty(t, f.types, "tous les types par défaut")
+
+	assert.Equal(t, http.StatusBadRequest, requete(t, s, http.MethodGet, "/parties?type=classee,tournoi", nil, "").Code)
+	assert.Equal(t, http.StatusBadRequest, requete(t, s, http.MethodGet, "/parties?avant=hier", nil, "").Code)
+	assert.Equal(t, http.StatusBadRequest, requete(t, s, http.MethodGet, "/parties?limite=101", nil, "").Code)
 }
 
 func TestClassement(t *testing.T) {

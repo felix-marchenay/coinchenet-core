@@ -527,6 +527,21 @@ func TestHistoriqueEtEvolutionElo(t *testing.T) {
 	assert.NotNil(t, aucune)
 	assert.Empty(t, aucune)
 
+	require.NoError(t, b.Ajouter(ctx, parties[4], []table.Evenement{
+		evenement(t, 3, table.EvtMene, table.MeneTerminee{Mene: 1, Scores: [2]int{0, 160}}),
+		evenement(t, 4, table.EvtMene, table.MeneTerminee{Mene: 2, Scores: [2]int{250, 160}}),
+	}))
+	classees, err := b.PartiesJouees(ctx, []string{string(table.Classee)}, nil, 10)
+	require.NoError(t, err)
+	require.Len(t, classees, 5, "ni la privée ni celle en cours")
+	assert.Equal(t, parties[4], classees[0].ID)
+	assert.Equal(t, [][2]int{{0, 160}, {250, 160}}, classees[0].Menes, "scores cumulés, dans l'ordre des mènes")
+	assert.Equal(t, [][2]int{}, classees[1].Menes)
+	assert.Len(t, classees[0].Participants, 4)
+	toutes, err := b.PartiesJouees(ctx, nil, &classees[1].Debut, 10)
+	require.NoError(t, err)
+	assert.Len(t, toutes, 3, "tous types, avant le curseur")
+
 	points, err := b.EvolutionElo(ctx, js[1].ID, 3)
 	require.NoError(t, err)
 	require.Len(t, points, 3, "les trois plus récentes, partie privée exclue")

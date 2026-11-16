@@ -83,6 +83,12 @@ type ResumePartie struct {
 	Participants   []Participant   `json:"participants"`
 }
 
+// PartieJouee est une partie terminée, avec les scores cumulés après chaque mène.
+type PartieJouee struct {
+	ResumePartie
+	Menes [][2]int `json:"menes"`
+}
+
 // Participe indique si le joueur était assis à cette partie.
 func (r ResumePartie) Participe(joueur uuid.UUID) bool {
 	for _, p := range r.Participants {
@@ -113,6 +119,8 @@ type Joueurs interface {
 type Historique interface {
 	Classement(ctx context.Context, page, taille int) (PageClassement, error)
 	PartiesDuJoueur(ctx context.Context, joueur uuid.UUID, avant *time.Time, limite int) ([]ResumePartie, error)
+	// PartiesJouees liste les parties terminées, des plus récentes aux plus anciennes ; types vide : toutes.
+	PartiesJouees(ctx context.Context, types []string, avant *time.Time, limite int) ([]PartieJouee, error)
 	EvolutionElo(ctx context.Context, joueur uuid.UUID, limite int) ([]PointElo, error)
 	Partie(ctx context.Context, id uuid.UUID) (ResumePartie, error)
 }
