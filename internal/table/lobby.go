@@ -42,7 +42,7 @@ func (t *Table) executerLobby(ctx context.Context, c Commande) error {
 		if t.sieges[d.Siege] != nil {
 			return ErrSiegeOccupe
 		}
-		profil, nom, err := t.choisirProfil(d.Profil)
+		profil, nom, err := t.nouveauBot(d.Profil)
 		if err != nil {
 			return err
 		}
@@ -171,30 +171,35 @@ func (t *Table) commencer(ctx context.Context) error {
 	return nil
 }
 
-// choisirProfil valide le profil demandé, ou prend le premier qui n'est pas déjà assis à la table :
-// chaque bot garde ainsi un prénom distinct.
-func (t *Table) choisirProfil(demande string) (string, string, error) {
-	assis := make(map[string]bool, coinche.NbSieges)
+func (t *Table) profilAuHasard() string {
+	profils := t.deps.Decideur.Profils()
+	return profils[t.deps.Hasard.Intn(len(profils))]
+}
+
+// nouveauBot valide le profil demandé, ou en tire un au hasard, et baptise le bot d'un prénom de sa
+// famille qu'aucun autre siège ne porte.
+func (t *Table) nouveauBot(profil string) (string, string, error) {
+	if profil == "" {
+		profil = t.profilAuHasard()
+	}
+	famille, prenoms, ok := t.deps.Decideur.Famille(profil)
+	if !ok {
+		return "", "", ErrProfilInconnu
+	}
+	pris := make(map[string]bool, coinche.NbSieges)
 	for _, o := range t.sieges {
-		if o != nil && o.bot {
-			assis[o.profil] = true
+		if o != nil {
+			pris[o.joueur.Pseudo] = true
 		}
 	}
-	if demande != "" {
-		nom, ok := t.deps.Decideur.Nom(demande)
-		if !ok {
-			return "", "", ErrProfilInconnu
-		}
-		if assis[demande] {
-			return "", "", ErrProfilPris
-		}
-		return demande, nom, nil
-	}
-	for _, p := range t.deps.Decideur.Profils() {
-		if !assis[p] {
-			nom, _ := t.deps.Decideur.Nom(p)
-			return p, nom, nil
+	var libres []string
+	for _, p := range prenoms {
+		if nom := p + " " + famille; !pris[nom] {
+			libres = append(libres, nom)
 		}
 	}
-	return "", "", ErrProfilPris
+	if len(libres) == 0 {
+		return profil, famille, nil
+	}
+	return profil, libres[t.deps.Hasard.Intn(len(libres))], nil
 }

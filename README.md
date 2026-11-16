@@ -116,16 +116,18 @@ Toute la configuration passe par des variables d'environnement.
 
 ## Bots
 
-Chaque bot a un profil, avec un prénom et une personnalité :
+Chaque bot appartient à une famille, et c'est sa famille qui décide de sa façon de jouer. Il porte un prénom tiré au hasard parmi les dix de sa famille, par exemple Gisèle Kerfoule ou Django Narvaloche. Plusieurs membres d'une même famille peuvent s'asseoir à la même table, chacun avec son prénom.
 
-| Profil | Style | Aux enchères | Au jeu |
-|--------|-------|--------------|--------|
-| Bernard | prudent | N'annonce que ce qu'il tient, soutient peu, ne surcoinche jamais. Coinche volontiers un contrat trop gourmand. | Attend qu'un pli soit à l'abri avant de le charger. |
-| Martine | équilibrée | Annonce ce que sa main vaut et coinche quand la chute est probable. Remplace les joueurs absents. | Idem. |
-| Nadia | agressive | Compte sur son partenaire, prend la main le plus souvent possible, surenchérit plutôt que de coincher. | Charge le pli de son partenaire dès que sa carte est maîtresse. |
-| Léo | casse-cou | Annonce des capots à l'intuition, coinche et surcoinche au culot. | Charge sans attendre. |
+| Famille | Style | Aux enchères | Au jeu |
+|---------|-------|--------------|--------|
+| Kerfoule | prudent | N'annoncent que ce qu'ils tiennent, soutiennent peu, ne surcoinchent jamais. Coinchent volontiers un contrat trop gourmand. | Attendent qu'un pli soit à l'abri avant de le charger. |
+| McBalance | équilibré | Annoncent ce que vaut leur main et coinchent quand la chute est probable. | Idem. |
+| Lashpa | agressif | Comptent sur leur partenaire, prennent la main le plus souvent possible, surenchérissent plutôt que de coincher. | Chargent le pli de leur partenaire dès que leur carte est maîtresse. |
+| Narvaloche | casse-cou | Annoncent des capots à l'intuition, coinchent et surcoinchent au culot. | Chargent sans attendre. |
 
-Six réglages font ces personnalités (`internal/bot/profils.go`) :
+Un bot placé sans famille précise, ou qui remplace un joueur absent, est tiré au hasard parmi toutes les familles.
+
+Six réglages font ces personnalités (`internal/bot/profils.go`, qui liste aussi les prénoms) :
 
 - l'apport attendu du partenaire ;
 - le soutien minimal pour monter sur son annonce ;
@@ -133,18 +135,18 @@ Six réglages font ces personnalités (`internal/bot/profils.go`) :
 - les marges de coinche et de surcoinche ;
 - la charge risquée.
 
-`coinchenet tournoi` oppose les profils deux à deux et estime leur ELO. Les réglages actuels les gardent de force comparable, la personnalité change la façon de gagner :
+`coinchenet tournoi` oppose les familles deux à deux et estime leur ELO. Les réglages actuels les gardent de force comparable, la personnalité change la façon de gagner :
 
 ```
 graine 42, 3000 parties par rencontre
 Profil                   ELO  Victoires   Prises/mène  Réussite   Coinches %   Capots
-Bernard (prudent)       1190      48.6%         32.6%     84.7%         3.4%       11
-Martine (équilibrée)    1199      49.9%         53.2%     71.1%         2.1%        9
-Nadia (agressive)       1205      50.7%         61.5%     67.2%         0.5%       11
-Léo (casse-cou)         1206      50.9%         53.3%     72.6%         6.0%       25
+Kerfoule (prudent)      1190      48.6%         32.6%     84.7%         3.4%       11
+McBalance (équilibré)   1199      49.9%         53.2%     71.1%         2.1%        9
+Lashpa (agressif)       1205      50.7%         61.5%     67.2%         0.5%       11
+Narvaloche (casse-cou)  1206      50.9%         53.3%     72.6%         6.0%       25
 ```
 
-`coinchenet simuler -profils leo,bernard` fait jouer deux profils l'un contre l'autre.
+`coinchenet simuler -profils narvaloche,kerfoule` fait jouer deux familles l'une contre l'autre.
 
 ## Tests
 

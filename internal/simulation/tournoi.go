@@ -34,7 +34,7 @@ func Tournoi(nbParties int, graine uint64, regles coinche.Regles, profils []bot.
 			rencontre++
 			r, err := SimulerEntre(nbParties, graine+rencontre, regles, [2]bot.Profil{profils[i], profils[j]})
 			if err != nil {
-				return nil, fmt.Errorf("%s contre %s : %w", profils[i].Nom, profils[j].Nom, err)
+				return nil, fmt.Errorf("%s contre %s : %w", profils[i].Famille, profils[j].Famille, err)
 			}
 			jouees := r.Menes - r.Redistributions
 			for k, idx := range [2]int{i, j} {
@@ -72,7 +72,7 @@ func FormaterTournoi(lignes []LigneTournoi) string {
 	fmt.Fprintf(&b, "%-22s %5s %10s %13s %9s %12s %8s\n", "Profil", "ELO", "Victoires", "Prises/mène", "Réussite", "Coinches %", "Capots")
 	for _, l := range lignes {
 		fmt.Fprintf(&b, "%-22s %5d %9.1f%% %12.1f%% %8.1f%% %11.1f%% %8d\n",
-			l.Profil.Nom+" ("+l.Profil.Style+")", l.Elo,
+			l.Profil.Famille+" ("+l.Profil.Style+")", l.Elo,
 			pourcentage(l.Victoires, l.Parties),
 			pourcentage(l.Prises, l.Menes),
 			pourcentage(l.Reussies, l.Prises),

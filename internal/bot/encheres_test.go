@@ -80,7 +80,7 @@ func TestSurcoincheUnContratLargementAssure(t *testing.T) {
 	vue := vueEncheres(0, main, options, annonce(0, coinche.AtoutCoeur, coinche.A100))
 
 	assert.Equal(t, coinche.Surcoinche, Bot{}.Encherir(vue).Type)
-	assert.Equal(t, coinche.NouvellePasse(), Bot{Profil: Bernard}.Encherir(vue), "le prudent ne surcoinche jamais")
+	assert.Equal(t, coinche.NouvellePasse(), Bot{Profil: Kerfoule}.Encherir(vue), "les prudents ne surcoinchent jamais")
 }
 
 func TestSoutientSonPartenaire(t *testing.T) {
