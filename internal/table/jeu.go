@@ -183,12 +183,12 @@ func (t *Table) jouerAutomatiquement(ctx context.Context, s coinche.Siege) {
 	var err error
 	switch phase {
 	case coinche.PhaseEncheres:
-		if err = t.encherir(ctx, s, t.deps.Decideur.Encherir(v)); err != nil && !t.ferme {
+		if err = t.encherir(ctx, s, t.deps.Decideur.Encherir(t.sieges[s].profil, v)); err != nil && !t.ferme {
 			t.log.Warn("enchère du bot refusée", "siege", s, "erreur", err)
 			err = t.encherir(ctx, s, coinche.NouvellePasse())
 		}
 	case coinche.PhaseJeu:
-		if err = t.jouer(ctx, s, t.deps.Decideur.Jouer(v)); err != nil && !t.ferme {
+		if err = t.jouer(ctx, s, t.deps.Decideur.Jouer(t.sieges[s].profil, v)); err != nil && !t.ferme {
 			t.log.Warn("carte du bot refusée", "siege", s, "erreur", err)
 			err = t.jouer(ctx, s, v.Mene.CartesJouables[0])
 		}

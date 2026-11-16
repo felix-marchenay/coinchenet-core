@@ -7,9 +7,9 @@ import (
 )
 
 const (
-	// apportPartenaire estime les points que le partenaire ramène en moyenne.
-	apportPartenaire = 30
-	pointsParLevee   = 20
+	pointsParLevee = 20
+	// pointsMene : 152 points de cartes et 10 de der.
+	pointsMene = 162
 )
 
 // ordreAtoutDecroissant et ordreCouleurDecroissant listent les valeurs de la plus forte à la plus faible.
@@ -18,11 +18,11 @@ var (
 	ordreCouleurDecroissant = [...]coinche.Valeur{coinche.As, coinche.Dix, coinche.Roi, coinche.Dame, coinche.Valet, coinche.Neuf, coinche.Huit, coinche.Sept}
 )
 
-func meilleureAnnonce(main []coinche.Carte) (coinche.Atout, coinche.ValeurAnnonce) {
+func (p Profil) meilleureAnnonce(main []coinche.Carte) (coinche.Atout, coinche.ValeurAnnonce) {
 	var meilleur coinche.Atout
 	var valeur coinche.ValeurAnnonce
 	for _, a := range coinche.Atouts {
-		if v := estimer(main, a); v > valeur {
+		if v := p.estimer(main, a); v > valeur {
 			meilleur, valeur = a, v
 		}
 	}
@@ -30,20 +30,29 @@ func meilleureAnnonce(main []coinche.Carte) (coinche.Atout, coinche.ValeurAnnonc
 }
 
 // estimer renvoie le contrat que la main permet d'espérer à cet atout, ou 0.
-func estimer(main []coinche.Carte, a coinche.Atout) coinche.ValeurAnnonce {
-	l, ok := levees(main, a)
+func (p Profil) estimer(main []coinche.Carte, a coinche.Atout) coinche.ValeurAnnonce {
+	points, ok := p.points(main, a)
 	if !ok {
 		return 0
 	}
-	if a.EstCouleur() && toutesSures(main, coinche.Couleur(a)) {
+	if a.EstCouleur() && toutesSures(main, coinche.Couleur(a)) || points >= p.AudaceCapot {
 		return coinche.Capot
 	}
 
-	estimation := int(math.Floor(l*pointsParLevee+apportPartenaire)) / 10 * 10
+	estimation := points / 10 * 10
 	if estimation < int(coinche.A80) {
 		return 0
 	}
 	return coinche.ValeurAnnonce(min(estimation, int(coinche.A160)))
+}
+
+// points estime ce que l'équipe marquera en prenant à cet atout, partenaire compris.
+func (p Profil) points(main []coinche.Carte, a coinche.Atout) (int, bool) {
+	l, ok := levees(main, a)
+	if !ok {
+		return 0, false
+	}
+	return int(math.Floor(l*pointsParLevee)) + p.Optimisme, true
 }
 
 func levees(main []coinche.Carte, a coinche.Atout) (float64, bool) {
@@ -180,18 +189,94 @@ func sequenceDeTete(cartes []coinche.Carte, ordre []coinche.Valeur) int {
 	return n
 }
 
-// soutenir surenchérit dans la couleur du partenaire si la main lui apporte au moins 10 points.
-func soutenir(v coinche.Vue, o coinche.OptionsEnchere) coinche.Enchere {
+// soutenir surenchérit une fois dans la couleur du partenaire si la main lui apporte assez.
+func (p Profil) soutenir(v coinche.Vue, o coinche.OptionsEnchere) (coinche.Enchere, bool) {
 	if aDejaAnnonce(v) {
-		return coinche.NouvellePasse()
+		return coinche.Enchere{}, false
 	}
 	contrat := *v.Mene.Contrat
 	apport := soutien(v.Main, contrat.Atout)
 	valeur := coinche.ValeurAnnonce(min(int(contrat.Valeur)+apport, int(coinche.A160)))
-	if apport < 10 || valeur < o.AnnonceMin {
-		return coinche.NouvellePasse()
+	if apport < p.SoutienMin || valeur < o.AnnonceMin {
+		return coinche.Enchere{}, false
 	}
-	return coinche.NouvelleAnnonce(contrat.Atout, valeur)
+	return coinche.NouvelleAnnonce(contrat.Atout, valeur), true
+}
+
+// coincher : le contrat adverse devrait chuter d'au moins MargeCoinche points. Contre un capot ou
+// une générale, seules comptent les levées sûres, plus nombreuses pour les moins hardis.
+func (p Profil) coincher(v coinche.Vue) bool {
+	contrat := *v.Mene.Contrat
+	if contrat.Valeur >= coinche.Capot {
+		return leveesSures(v.Main, contrat.Atout)*pointsParLevee >= pointsParLevee+p.MargeCoinche
+	}
+	defense := leveesDefense(v.Main, contrat.Atout)
+	preneur := pointsMene - int(math.Floor(defense*pointsParLevee)) - p.Optimisme
+	return int(contrat.Valeur)-preneur >= p.MargeCoinche
+}
+
+// surcoincher : son équipe devrait dépasser le contrat coinché d'au moins MargeSurcoinche points.
+func (p Profil) surcoincher(v coinche.Vue) bool {
+	vm := v.Mene
+	if vm.Contrat == nil || vm.Preneur == nil || p.MargeSurcoinche >= Jamais {
+		return false
+	}
+	contrat := *vm.Contrat
+	if contrat.Valeur >= coinche.Capot {
+		return *vm.Preneur == v.Siege && contrat.Atout.EstCouleur() && toutesSures(v.Main, coinche.Couleur(contrat.Atout))
+	}
+	if *vm.Preneur == v.Siege {
+		points, ok := p.points(v.Main, contrat.Atout)
+		return ok && points-int(contrat.Valeur) >= p.MargeSurcoinche
+	}
+	return soutien(v.Main, contrat.Atout) >= p.MargeSurcoinche
+}
+
+// leveesSures compte les cartes qui feront un pli quoi que joue le preneur : les valets d'atout,
+// et les as à sans-atout.
+func leveesSures(main []coinche.Carte, a coinche.Atout) int {
+	n := 0
+	for _, c := range main {
+		switch {
+		case a == coinche.SansAtout && c.Valeur == coinche.As,
+			a == coinche.ToutAtout && c.Valeur == coinche.Valet,
+			a.EstCouleur() && c.Couleur == coinche.Couleur(a) && c.Valeur == coinche.Valet:
+			n++
+		}
+	}
+	return n
+}
+
+// leveesDefense estime les levées que la main fera contre un contrat adverse à cet atout.
+func leveesDefense(main []coinche.Carte, a coinche.Atout) float64 {
+	l := 0.0
+	for _, co := range coinche.Couleurs {
+		cartes := deCouleur(main, co)
+		if a == coinche.ToutAtout || a.EstCouleur() && co == coinche.Couleur(a) {
+			if possede(cartes, coinche.Valet) {
+				l++
+			}
+			if possede(cartes, coinche.Neuf) && len(cartes) >= 2 {
+				l += 0.7
+			}
+			if possede(cartes, coinche.As) && len(cartes) >= 3 {
+				l += 0.4
+			}
+			continue
+		}
+		if !possede(cartes, coinche.As) {
+			continue
+		}
+		if a == coinche.SansAtout {
+			l++
+		} else {
+			l += 0.8
+		}
+		if possede(cartes, coinche.Dix) {
+			l += 0.5
+		}
+	}
+	return l
 }
 
 func soutien(main []coinche.Carte, a coinche.Atout) int {

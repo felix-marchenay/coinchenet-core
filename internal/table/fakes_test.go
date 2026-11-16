@@ -265,7 +265,7 @@ func nouvelEnvironnement() *environnement {
 		Archiviste: env.archiviste,
 		Diffuseur:  env.diffuseur,
 		Annuaire:   env.annuaire,
-		Decideur:   bot.Bot{},
+		Decideur:   bot.Bots{},
 		Melangeur:  coinche.FischerYatesMelangeur{Hasard: hasard},
 		Coupeur:    coinche.RandomCoupeur{Hasard: hasard},
 		Hasard:     hasard,

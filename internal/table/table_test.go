@@ -104,6 +104,10 @@ func TestPartiePriveeComplete(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, fin.Scores, restauree.partie.Scores, "le journal rejoue la partie à l'identique")
 		assert.Equal(t, StatutTerminee, restauree.statut)
+		for s, profil := range map[coinche.Siege]string{1: "bernard", 2: "martine", 3: "nadia"} {
+			assert.Equal(t, profil, restauree.sieges[s].profil, "les bots gardent leur profil à la reprise")
+		}
+		assert.Equal(t, "Bernard", restauree.sieges[1].joueur.Pseudo)
 
 		patienter(env.cfg.DelaiFermeture)
 		synctest.Wait()
@@ -112,6 +116,35 @@ func TestPartiePriveeComplete(t *testing.T) {
 		default:
 			t.Fatal("la table devrait être fermée après le délai de fermeture")
 		}
+	})
+}
+
+func TestProfilsDesBots(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		env := nouvelEnvironnement()
+		alice := joueur("Alice", 1200)
+		tb, err := NouvelleTablePrivee(uuid.New(), alice, "ABCDEF", optionsRapides(), env.deps, env.cfg)
+		require.NoError(t, err)
+		lancerActeur(t, tb)
+		tb.Envoyer(commande(CmdConnexion, alice, "a", nil))
+
+		tb.Envoyer(commande(CmdBot, alice, "a", DonneesBot{Siege: 1, Profil: "leo"}))
+		tb.Envoyer(commande(CmdBot, alice, "a", DonneesBot{Siege: 2, Profil: "leo"}))
+		tb.Envoyer(commande(CmdBot, alice, "a", DonneesBot{Siege: 2, Profil: "zorro"}))
+		tb.Envoyer(commande(CmdBot, alice, "a", DonneesBot{Siege: 2}))
+		tb.Envoyer(commande(CmdBot, alice, "a", DonneesBot{Siege: 3}))
+		synctest.Wait()
+		assert.Equal(t, []string{"profil_pris", "profil_inconnu"}, env.diffuseur.codesErreur(alice.ID))
+
+		var etat EtatTable
+		require.True(t, env.diffuseur.dernier(t, alice.ID, MsgEtat, &etat))
+		for s, attendu := range map[coinche.Siege][2]string{1: {"leo", "Léo"}, 2: {"bernard", "Bernard"}, 3: {"martine", "Martine"}} {
+			require.NotNil(t, etat.Sieges[s])
+			assert.True(t, etat.Sieges[s].Bot)
+			assert.Equal(t, attendu[0], etat.Sieges[s].Profil, "siège %d", s)
+			assert.Equal(t, attendu[1], etat.Sieges[s].Joueur.Pseudo, "siège %d", s)
+		}
+		assert.Empty(t, etat.Sieges[0].Profil, "un humain n'a pas de profil")
 	})
 }
 

@@ -19,7 +19,13 @@ type Rapport struct {
 	Victoires                                         [2]int
 	ContratsReussis, ContratsChutes, Capots, Coinches int
 	PointsMoyensParMene                               float64
+	Equipes                                           [2]StatsEquipe
 	Duree                                             time.Duration
+}
+
+// StatsEquipe décrit le comportement d'une équipe : ses prises, ses coinches en défense, ses capots annoncés.
+type StatsEquipe struct {
+	Prises, Reussies, Coinches, CapotsAnnonces int
 }
 
 func (r Rapport) String() string {
@@ -42,10 +48,16 @@ func pourcentage(n, total int) float64 {
 }
 
 func Simuler(nbParties int, graine uint64, regles coinche.Regles) (Rapport, error) {
+	return SimulerEntre(nbParties, graine, regles, [2]bot.Profil{bot.Defaut, bot.Defaut})
+}
+
+// SimulerEntre fait jouer l'équipe A (sièges 0 et 2) avec le premier profil, l'équipe B avec le second.
+func SimulerEntre(nbParties int, graine uint64, regles coinche.Regles, profils [2]bot.Profil) (Rapport, error) {
 	debut := time.Now()
 	s := simulateur{
 		hasard: coinche.NouveauHasardDeterministe(graine),
 		regles: regles,
+		bots:   [2]bot.Bot{{Profil: profils[0]}, {Profil: profils[1]}},
 	}
 	s.melangeur = coinche.FischerYatesMelangeur{Hasard: s.hasard}
 	s.coupeur = coinche.RandomCoupeur{Hasard: s.hasard}
@@ -70,7 +82,7 @@ type simulateur struct {
 	melangeur     coinche.Melangeur
 	coupeur       coinche.Coupeur
 	regles        coinche.Regles
-	bot           bot.Bot
+	bots          [2]bot.Bot
 	rapport       Rapport
 	pointsMarques int
 }
@@ -115,7 +127,7 @@ func (s *simulateur) jouerMene(p *coinche.Partie) (coinche.ResultatMene, error) 
 
 	for m.Phase == coinche.PhaseEncheres {
 		siege := m.Tour
-		e := s.bot.Encherir(p.Vue(siege))
+		e := s.bots[siege.Equipe()].Encherir(p.Vue(siege))
 		if _, err := p.Encherir(siege, e); err != nil {
 			return coinche.ResultatMene{}, fmt.Errorf("enchère %v du %v refusée : %w", e.Type, siege, err)
 		}
@@ -128,7 +140,7 @@ func (s *simulateur) jouerMene(p *coinche.Partie) (coinche.ResultatMene, error) 
 	jouees := make(map[coinche.Carte]bool, 32)
 	for !m.Terminee() {
 		siege := m.Tour
-		c := s.bot.Jouer(p.Vue(siege))
+		c := s.bots[siege.Equipe()].Jouer(p.Vue(siege))
 		if jouees[c] {
 			return coinche.ResultatMene{}, fmt.Errorf("carte %v jouée deux fois", c)
 		}
@@ -154,13 +166,21 @@ func (s *simulateur) jouerMene(p *coinche.Partie) (coinche.ResultatMene, error) 
 		return coinche.ResultatMene{}, fmt.Errorf("points faits %v : total %d au lieu de %d", r.PointsFaits, total, attendu)
 	}
 
+	preneuse := r.Preneur.Equipe()
+	equipe := &s.rapport.Equipes[preneuse]
+	equipe.Prises++
+	if r.Contrat != nil && r.Contrat.Valeur >= coinche.Capot {
+		equipe.CapotsAnnonces++
+	}
 	if r.Reussi {
 		s.rapport.ContratsReussis++
+		equipe.Reussies++
 	} else {
 		s.rapport.ContratsChutes++
 	}
 	if r.Multiplicateur > 1 {
 		s.rapport.Coinches++
+		s.rapport.Equipes[preneuse.Adverse()].Coinches++
 	}
 	s.pointsMarques += r.Points[coinche.EquipeA] + r.Points[coinche.EquipeB]
 	return *r, nil

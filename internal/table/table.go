@@ -15,8 +15,10 @@ import (
 )
 
 type occupant struct {
-	joueur        Joueur
-	bot           bool
+	joueur Joueur
+	bot    bool
+	// profil du bot assis ; vide pour un humain, que le profil par défaut remplace s'il est absent.
+	profil        string
 	abandon       bool
 	absent        bool
 	delaisExpires int
@@ -419,7 +421,7 @@ func (t *Table) etatPour(joueur uuid.UUID) EtatTable {
 		if o == nil {
 			continue
 		}
-		es := &EtatSiege{Bot: o.bot, Statut: o.statut()}
+		es := &EtatSiege{Bot: o.bot, Profil: o.profil, Statut: o.statut()}
 		if o.humain() {
 			j := o.joueur
 			es.Joueur = &j

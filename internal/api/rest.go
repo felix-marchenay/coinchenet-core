@@ -10,6 +10,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/felix-marchenay/coinchenet-core/internal/bot"
 	"github.com/felix-marchenay/coinchenet-core/internal/classement"
 	"github.com/felix-marchenay/coinchenet-core/internal/coinche"
 	"github.com/felix-marchenay/coinchenet-core/internal/donnees"
@@ -40,6 +41,10 @@ func (s *Serveur) pret(w http.ResponseWriter, r *http.Request) {
 
 func (s *Serveur) version(w http.ResponseWriter, _ *http.Request) {
 	ecrireJSON(w, http.StatusOK, map[string]string{"version": s.d.Version})
+}
+
+func (s *Serveur) bots(w http.ResponseWriter, _ *http.Request) {
+	ecrireJSON(w, http.StatusOK, map[string]any{"bots": bot.Profils})
 }
 
 func (s *Serveur) regles(w http.ResponseWriter, _ *http.Request) {

@@ -8,8 +8,6 @@ import (
 	"github.com/felix-marchenay/coinchenet-core/internal/protocole"
 )
 
-var nomsBots = [...]string{"Bot Alpha", "Bot Bravo", "Bot Charlie", "Bot Delta"}
-
 func (t *Table) executerLobby(ctx context.Context, c Commande) error {
 	s, assis := t.siegeDe(c.Joueur.ID)
 	if !assis {
@@ -34,7 +32,7 @@ func (t *Table) executerLobby(ctx context.Context, c Commande) error {
 		if c.Joueur.ID != t.createur {
 			return ErrReserveAuCreateur
 		}
-		d, err := decoder[DonneesSiege](c)
+		d, err := decoder[DonneesBot](c)
 		if err != nil {
 			return err
 		}
@@ -44,7 +42,11 @@ func (t *Table) executerLobby(ctx context.Context, c Commande) error {
 		if t.sieges[d.Siege] != nil {
 			return ErrSiegeOccupe
 		}
-		t.sieges[d.Siege] = &occupant{bot: true, joueur: Joueur{Pseudo: nomsBots[d.Siege]}}
+		profil, nom, err := t.choisirProfil(d.Profil)
+		if err != nil {
+			return err
+		}
+		t.sieges[d.Siege] = &occupant{bot: true, profil: profil, joueur: Joueur{Pseudo: nom}}
 
 	case CmdLiberer:
 		if c.Joueur.ID != t.createur {
@@ -123,7 +125,7 @@ func (t *Table) commencer(ctx context.Context) error {
 	creee := PartieCreee{Type: t.typ, Options: t.options, PremierDonneur: premier}
 	for s, o := range t.sieges {
 		if o.bot {
-			creee.Sieges[s] = SiegeInitial{Bot: true, Joueur: &Joueur{Pseudo: o.joueur.Pseudo}}
+			creee.Sieges[s] = SiegeInitial{Bot: true, Profil: o.profil, Joueur: &Joueur{Pseudo: o.joueur.Pseudo}}
 			continue
 		}
 		j := o.joueur
@@ -167,4 +169,32 @@ func (t *Table) commencer(ctx context.Context) error {
 	t.diffuserEtat(ctx)
 	t.planifier(ctx)
 	return nil
+}
+
+// choisirProfil valide le profil demandé, ou prend le premier qui n'est pas déjà assis à la table :
+// chaque bot garde ainsi un prénom distinct.
+func (t *Table) choisirProfil(demande string) (string, string, error) {
+	assis := make(map[string]bool, coinche.NbSieges)
+	for _, o := range t.sieges {
+		if o != nil && o.bot {
+			assis[o.profil] = true
+		}
+	}
+	if demande != "" {
+		nom, ok := t.deps.Decideur.Nom(demande)
+		if !ok {
+			return "", "", ErrProfilInconnu
+		}
+		if assis[demande] {
+			return "", "", ErrProfilPris
+		}
+		return demande, nom, nil
+	}
+	for _, p := range t.deps.Decideur.Profils() {
+		if !assis[p] {
+			nom, _ := t.deps.Decideur.Nom(p)
+			return p, nom, nil
+		}
+	}
+	return "", "", ErrProfilPris
 }

@@ -41,6 +41,7 @@ Les requêtes REST qui modifient des données exigent `Content-Type: application
 | GET | `/pret` | – | Disponibilité de Postgres et Redis (200 ou 503 avec le détail). |
 | GET | `/version` | – | Version du serveur. |
 | GET | `/regles` | – | Règles par défaut, règles classées, valeurs autorisées, messages de chat prédéfinis, paramètres d'ELO. |
+| GET | `/bots` | – | Profils de bots proposés, du plus prudent au plus téméraire : `{"bots": [{"id", "nom", "style", "description"}]}`. |
 | GET | `/moi` | oui | Mon profil, plus `table` si je suis à une table. |
 | PATCH | `/moi` | oui | `{"pseudo": "Nouveau"}` : de 3 à 20 caractères parmi `[A-Za-z0-9_-]`. Erreurs `pseudo_invalide` (400) ou `pseudo_pris` (409). |
 | GET | `/joueurs?pseudo=Alice` | – | Recherche exacte par pseudo, insensible à la casse. |
@@ -109,7 +110,7 @@ File classée et tables privées s'excluent :
 | `table.rejoindre` | `{"code": "K7M2QX"}` ou `{"table": "<uuid>"}` | Rejoint une table privée et prend le premier siège libre. |
 | `table.etat` | – | Redemande l'instantané `partie.etat`. |
 | `table.siege` | `{"siege": 2}` | Change de siège (avant le lancement). |
-| `table.bot` | `{"siege": 3}` | Place un bot (créateur seulement, avant le lancement). |
+| `table.bot` | `{"siege": 3, "profil": "leo"}` | Place un bot (créateur seulement, avant le lancement). `profil` est facultatif (voir `GET /bots`) ; sans lui, la table prend le premier profil qui n'y est pas déjà assis. Le prénom du profil devient le pseudo du siège. |
 | `table.liberer` | `{"siege": 3}` | Retire un bot ou exclut un joueur (créateur seulement). |
 | `table.lancer` | – | Lance la partie (créateur seulement, 4 sièges occupés). |
 | `table.quitter` | – | Quitte une table pas encore lancée. |
@@ -125,7 +126,7 @@ Les messages de partie portent `table` (uuid) et `seq`, le numéro de l'événem
 
 | Type | Données principales |
 |---|---|
-| `partie.etat` | Instantané complet : `type`, `statut` (`attente`, `en_cours`, `terminee`), `code`, `createur`, `options`, `sieges[4]` (`joueur`, `bot`, `statut`, `retour_avant`), `moi`, `echeance` et `jeu`. `jeu` contient : `scores`, `historique`, ma `main`, et la mène en cours dans `mene` (`phase`, `tour`, `donneur`, `encheres`, `contrat`, `preneur`, `multiplicateur`, `pli_en_cours`, `plis`, `nb_cartes`, `belote` une fois annoncée, et pour le joueur dont c'est le tour, `cartes_jouables` ou `options_enchere`). |
+| `partie.etat` | Instantané complet : `type`, `statut` (`attente`, `en_cours`, `terminee`), `code`, `createur`, `options`, `sieges[4]` (`joueur`, `bot`, `profil` pour un bot, `statut`, `retour_avant`), `moi`, `echeance` et `jeu`. `jeu` contient : `scores`, `historique`, ma `main`, et la mène en cours dans `mene` (`phase`, `tour`, `donneur`, `encheres`, `contrat`, `preneur`, `multiplicateur`, `pli_en_cours`, `plis`, `nb_cartes`, `belote` une fois annoncée, et pour le joueur dont c'est le tour, `cartes_jouables` ou `options_enchere`). |
 | `partie.commencee` | `{table, type}` : une partie démarre (ou reprend). La connexion la rejoint d'elle-même. |
 | `partie.donne` | `{mene, donneur, main}` : la main du joueur seulement. |
 | `partie.tour` | `{siege, phase, echeance}`. Le joueur concerné reçoit en plus `cartes_jouables` ou `options_enchere` (`{passe, annonce_min, coinche, surcoinche}`). |
@@ -159,6 +160,7 @@ Les messages de partie portent `table` (uuid) et `seq`, le numéro de l'événem
 | `non_assis` | Le joueur n'est pas assis à cette table. |
 | `exclu` | Le créateur de la table en a exclu le joueur. |
 | `table_complete` | Il n'y a plus de siège libre. |
+| `profil_inconnu`, `profil_pris` | Profil de bot inexistant, ou déjà assis à la table. |
 | `interdit` | Action réservée à un autre joueur (le créateur, par exemple). |
 | `partie_non_commencee`, `partie_deja_lancee`, `partie_terminee` | La partie n'est pas dans l'état attendu. |
 | `aucune_table` | Commande de partie envoyée sans être à une table. |

@@ -3,6 +3,7 @@ package bot
 import "github.com/felix-marchenay/coinchenet-core/internal/coinche"
 
 type jeu struct {
+	profil    Profil
 	siege     coinche.Siege
 	atout     coinche.Atout
 	preneur   bool
@@ -11,7 +12,7 @@ type jeu struct {
 	inconnues []coinche.Carte
 }
 
-func nouveauJeu(v coinche.Vue) jeu {
+func nouveauJeu(v coinche.Vue, p Profil) jeu {
 	vm := v.Mene
 	connues := make(map[coinche.Carte]bool, 32)
 	for _, c := range vm.CartesJouees() {
@@ -28,6 +29,7 @@ func nouveauJeu(v coinche.Vue) jeu {
 	}
 
 	return jeu{
+		profil:    p,
 		siege:     v.Siege,
 		atout:     vm.Contrat.Atout,
 		preneur:   vm.Preneur != nil && vm.Preneur.Equipe() == v.Siege.Equipe(),
@@ -68,7 +70,7 @@ func (j jeu) suivre() coinche.Carte {
 	dernier := len(j.pli.Cartes) == coinche.NbSieges-1
 
 	if maitre.Siege == j.siege.Partenaire() {
-		if dernier || j.imbattable(maitre.Carte, demandee) {
+		if dernier || j.imbattable(maitre.Carte, demandee) || j.profil.ChargeRisquee && j.maitresse(maitre.Carte) {
 			return j.charger()
 		}
 		return j.moinsChere(j.jouables)

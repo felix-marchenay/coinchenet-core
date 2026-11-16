@@ -82,6 +82,7 @@ var MessagesPredefinis = []string{"bonne_chance", "bien_joue", "merci", "desole"
 type SiegeInitial struct {
 	Joueur *Joueur `json:"joueur,omitempty"`
 	Bot    bool    `json:"bot"`
+	Profil string  `json:"profil,omitempty"`
 }
 
 // Debut est transmis à l'archiviste au lancement de la partie.
@@ -136,10 +137,15 @@ type Annuaire interface {
 	Dissocier(ctx context.Context, joueur, table uuid.UUID) error
 }
 
-// Decideur choisit les actions d'un siège tenu par un bot.
+// Decideur choisit les actions des sièges tenus par un bot, selon le profil de chacun ; un profil
+// vide (joueur absent) ou inconnu joue avec le profil par défaut.
 type Decideur interface {
-	Encherir(v coinche.Vue) coinche.Enchere
-	Jouer(v coinche.Vue) coinche.Carte
+	Encherir(profil string, v coinche.Vue) coinche.Enchere
+	Jouer(profil string, v coinche.Vue) coinche.Carte
+	// Profils liste les profils proposés, dans l'ordre où ils sont attribués par défaut.
+	Profils() []string
+	// Nom renvoie le prénom affiché d'un profil.
+	Nom(profil string) (string, bool)
 }
 
 // Metriques est optionnel.
@@ -234,6 +240,8 @@ var (
 	ErrReserveAuCreateur    = erreur(protocole.CodeInterdit, "action réservée au créateur de la table")
 	ErrSiegeInvalide        = erreur(protocole.CodeRequeteInvalide, "siège invalide")
 	ErrSiegeOccupe          = erreur("siege_occupe", "ce siège est occupé")
+	ErrProfilInconnu        = erreur("profil_inconnu", "profil de bot inconnu")
+	ErrProfilPris           = erreur("profil_pris", "ce bot est déjà assis à la table")
 	ErrSiegeLibre           = erreur("siege_libre", "ce siège est libre")
 	ErrTableIncomplete      = erreur("table_incomplete", "il faut quatre joueurs pour lancer la partie")
 	ErrPartieNonCommencee   = erreur("partie_non_commencee", "la partie n'a pas commencé")

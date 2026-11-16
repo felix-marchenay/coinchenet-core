@@ -49,7 +49,7 @@ func tableDepuisCreation(id uuid.UUID, e Evenement, deps Dependances, cfg Config
 	}
 	t := nouvelleTable(id, pc.Type, pc.Options, deps, cfg)
 	for s, si := range pc.Sieges {
-		o := &occupant{bot: si.Bot, connexions: map[string]struct{}{}}
+		o := &occupant{bot: si.Bot, profil: si.Profil, connexions: map[string]struct{}{}}
 		if si.Joueur != nil {
 			o.joueur = *si.Joueur
 		}

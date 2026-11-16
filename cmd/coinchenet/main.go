@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/felix-marchenay/coinchenet-core/internal/application"
+	"github.com/felix-marchenay/coinchenet-core/internal/bot"
 	"github.com/felix-marchenay/coinchenet-core/internal/coinche"
 	"github.com/felix-marchenay/coinchenet-core/internal/config"
 	"github.com/felix-marchenay/coinchenet-core/internal/observabilite"
@@ -28,7 +29,8 @@ const usage = `usage : coinchenet [commande] [options]
 Commandes :
   serveur   démarre le serveur de jeu (commande par défaut)
   migrer    applique les migrations de la base puis s'arrête
-  simuler   fait jouer des parties entre bots (-parties, -graine, -regles)
+  simuler   fait jouer des parties entre bots (-parties, -graine, -regles, -profils)
+  tournoi   oppose les profils de bots deux à deux et estime leur ELO (-parties, -graine, -regles)
   sante     interroge /sante d'un serveur (-url), pour les healthchecks Docker
   version   affiche la version`
 
@@ -51,6 +53,8 @@ func executer(args []string) error {
 		return migrer()
 	case "simuler":
 		return simuler(args)
+	case "tournoi":
+		return tournoi(args)
 	case "sante":
 		return sante(args)
 	case "version":
@@ -111,21 +115,64 @@ func simuler(args []string) error {
 	parties := fs.Int("parties", 1000, "nombre de parties à jouer")
 	graine := fs.Uint64("graine", uint64(time.Now().UnixNano()), "graine du hasard (reproductible)")
 	regles := fs.String("regles", "classees", "classees ou traditionnelles")
+	profils := fs.String("profils", bot.Defaut.ID+","+bot.Defaut.ID, "profils des équipes A et B, séparés par une virgule")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
-	r := coinche.ReglesClassees()
-	if *regles == "traditionnelles" {
-		r = coinche.ReglesParDefaut()
-	} else if *regles != "classees" {
-		return fmt.Errorf("règles %q inconnues", *regles)
-	}
-	rapport, err := simulation.Simuler(*parties, *graine, r)
+	r, err := reglesNommees(*regles)
 	if err != nil {
 		return err
 	}
-	fmt.Printf("graine %d\n%s\n", *graine, rapport)
+	a, b, ok := strings.Cut(*profils, ",")
+	pa, okA := bot.Trouver(a)
+	pb, okB := bot.Trouver(b)
+	if !ok || !okA || !okB {
+		return fmt.Errorf("profils %q : deux profils parmi %s attendus", *profils, idsProfils())
+	}
+	rapport, err := simulation.SimulerEntre(*parties, *graine, r, [2]bot.Profil{pa, pb})
+	if err != nil {
+		return err
+	}
+	fmt.Printf("graine %d, %s contre %s\n%s\n", *graine, pa.Nom, pb.Nom, rapport)
 	return nil
+}
+
+func tournoi(args []string) error {
+	fs := flag.NewFlagSet("tournoi", flag.ContinueOnError)
+	parties := fs.Int("parties", 2000, "nombre de parties par rencontre")
+	graine := fs.Uint64("graine", uint64(time.Now().UnixNano()), "graine du hasard (reproductible)")
+	regles := fs.String("regles", "classees", "classees ou traditionnelles")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	r, err := reglesNommees(*regles)
+	if err != nil {
+		return err
+	}
+	lignes, err := simulation.Tournoi(*parties, *graine, r, bot.Profils)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("graine %d, %d parties par rencontre\n%s", *graine, *parties, simulation.FormaterTournoi(lignes))
+	return nil
+}
+
+func reglesNommees(nom string) (coinche.Regles, error) {
+	switch nom {
+	case "classees":
+		return coinche.ReglesClassees(), nil
+	case "traditionnelles":
+		return coinche.ReglesParDefaut(), nil
+	}
+	return coinche.Regles{}, fmt.Errorf("règles %q inconnues", nom)
+}
+
+func idsProfils() string {
+	ids := make([]string, len(bot.Profils))
+	for i, p := range bot.Profils {
+		ids[i] = p.ID
+	}
+	return strings.Join(ids, ", ")
 }
 
 func sante(args []string) error {
