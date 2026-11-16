@@ -141,7 +141,12 @@ La CI se connecte en SSH avec l'utilisateur `deploiement`. Chacune de ses clés 
 
 ### Réglages depuis GitHub
 
-Chaque secret ou variable GitHub du dépôt dont le nom commence par `COINCHE_` est recopié dans le `.env` du serveur à chaque déploiement. Par exemple `COINCHE_GOOGLE_CLIENT_SECRET` en secret, `COINCHE_LOG_NIVEAU` en variable. Un secret l'emporte sur une variable de même nom.
+Les réglages de production se gèrent dans GitHub et sont recopiés dans le `.env` du serveur à chaque déploiement :
+
+- **Variables** : toute variable du dépôt dont le nom commence par `COINCHE_`, par exemple `COINCHE_LOG_NIVEAU`.
+- **Secrets** : ceux que liste `.github/workflows/deploiement.yml`, c'est-à-dire les identifiants OAuth Google et Discord (`COINCHE_GOOGLE_CLIENT_ID`, `COINCHE_GOOGLE_CLIENT_SECRET`, `COINCHE_DISCORD_…`). Un nouveau secret s'ajoute à cette liste. Le workflow ne lit jamais tous les secrets d'un coup (`toJSON(secrets)`) : GitHub prendrait ce schéma pour une exfiltration et bloquerait le workflow.
+
+Un secret l'emporte sur une variable de même nom.
 
 Pour appliquer un changement sans nouveau commit : *Actions → Déploiement → Run workflow*, ou `gh workflow run deploiement.yml`.
 
