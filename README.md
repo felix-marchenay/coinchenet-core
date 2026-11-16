@@ -33,7 +33,7 @@ curl -s -X POST localhost:8080/tables -H "Authorization: Bearer $TOKEN" -H 'Cont
 
 websocat -H "Authorization: Bearer $TOKEN" ws://localhost:8080/ws
 {"type":"table.rejoindre","data":{"code":"K7M2QX"}}
-{"type":"table.bot","data":{"siege":1}}
+{"type":"table.bot","data":{"siege":1,"profil":"leo"}}
 {"type":"table.bot","data":{"siege":2}}
 {"type":"table.bot","data":{"siege":3}}
 {"type":"table.lancer"}
@@ -52,7 +52,7 @@ websocat -H "Authorization: Bearer $TOKEN" ws://localhost:8080/ws
 | `make simulate N=5000` | Fait jouer N parties entre bots et vérifie les invariants |
 | `make build` | Construit l'image de production |
 
-Le binaire `coinchenet` propose les sous-commandes `serveur` (par défaut), `migrer`, `simuler`, `sante` et `version`.
+Le binaire `coinchenet` propose les sous-commandes `serveur` (par défaut), `migrer`, `simuler`, `tournoi`, `sante` et `version`.
 
 ## Architecture
 
@@ -113,6 +113,38 @@ Toute la configuration passe par des variables d'environnement.
 | `COINCHE_INTERVALLE_REPRISE` | `10s` | Fréquence de recherche des parties orphelines |
 | `COINCHE_DEBIT_WS` | `10` | Messages par seconde acceptés d'un client WebSocket |
 | `COINCHE_ARRET_GRACIEUX` | `20s` | Temps laissé à l'arrêt propre |
+
+## Bots
+
+Chaque bot a un profil, avec un prénom et une personnalité :
+
+| Profil | Style | Aux enchères | Au jeu |
+|--------|-------|--------------|--------|
+| Bernard | prudent | N'annonce que ce qu'il tient, soutient peu, ne surcoinche jamais. Coinche volontiers un contrat trop gourmand. | Attend qu'un pli soit à l'abri avant de le charger. |
+| Martine | équilibrée | Annonce ce que sa main vaut et coinche quand la chute est probable. Remplace les joueurs absents. | Idem. |
+| Nadia | agressive | Compte sur son partenaire, prend la main le plus souvent possible, surenchérit plutôt que de coincher. | Charge le pli de son partenaire dès que sa carte est maîtresse. |
+| Léo | casse-cou | Annonce des capots à l'intuition, coinche et surcoinche au culot. | Charge sans attendre. |
+
+Six réglages font ces personnalités (`internal/bot/profils.go`) :
+
+- l'apport attendu du partenaire ;
+- le soutien minimal pour monter sur son annonce ;
+- l'estimation à partir de laquelle annoncer un capot non sûr ;
+- les marges de coinche et de surcoinche ;
+- la charge risquée.
+
+`coinchenet tournoi` oppose les profils deux à deux et estime leur ELO. Les réglages actuels les gardent de force comparable, la personnalité change la façon de gagner :
+
+```
+graine 42, 3000 parties par rencontre
+Profil                   ELO  Victoires   Prises/mène  Réussite   Coinches %   Capots
+Bernard (prudent)       1190      48.6%         32.6%     84.7%         3.4%       11
+Martine (équilibrée)    1199      49.9%         53.2%     71.1%         2.1%        9
+Nadia (agressive)       1205      50.7%         61.5%     67.2%         0.5%       11
+Léo (casse-cou)         1206      50.9%         53.3%     72.6%         6.0%       25
+```
+
+`coinchenet simuler -profils leo,bernard` fait jouer deux profils l'un contre l'autre.
 
 ## Tests
 
