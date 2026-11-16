@@ -32,7 +32,7 @@ func TestSimuler(t *testing.T) {
 			assert.Equal(t, r.Menes-r.Redistributions, r.ContratsReussis+r.ContratsChutes)
 			assert.Positive(t, r.ContratsReussis)
 			assert.Positive(t, r.ContratsChutes)
-			assert.Zero(t, r.Coinches, "le bot ne coinche jamais")
+			assert.Positive(t, r.Coinches, "le bot coinche les contrats qu'il pense faire chuter")
 			assert.Positive(t, r.PointsMoyensParMene)
 		})
 	}

@@ -9,16 +9,17 @@ import (
 	"github.com/felix-marchenay/coinchenet-core/internal/coinche"
 )
 
-// Sur des positions issues de vraies parties, chaque décision du bot est légale et reproductible.
+// Sur des positions issues de vraies parties, chaque décision du bot est légale et reproductible,
+// quel que soit son profil.
 func TestDecisionsToujoursLegales(t *testing.T) {
 	h := coinche.NouveauHasardDeterministe(2026)
 	melangeur := coinche.FischerYatesMelangeur{Hasard: h}
 	coupeur := coinche.RandomCoupeur{Hasard: h}
-	var b Bot
 	encheres, cartes := 0, 0
 
-	for _, regles := range []coinche.Regles{coinche.ReglesClassees(), coinche.ReglesParDefaut()} {
-		for range 20 {
+	for i, regles := range []coinche.Regles{coinche.ReglesClassees(), coinche.ReglesParDefaut()} {
+		for n := range 40 {
+			b := Bot{Profil: Profils[(i+n)%len(Profils)]}
 			p, err := coinche.NouvellePartie(regles, coinche.Siege(h.Intn(coinche.NbSieges)))
 			require.NoError(t, err)
 

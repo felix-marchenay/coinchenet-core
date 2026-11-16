@@ -74,11 +74,13 @@ func TestNeCoincheJamais(t *testing.T) {
 	assert.Equal(t, coinche.NouvellePasse(), Bot{}.Encherir(vueEncheres(0, main, options, annonce(3, coinche.AtoutCoeur, coinche.A80))))
 }
 
-func TestNeSurcoinchePas(t *testing.T) {
+func TestSurcoincheUnContratLargementAssure(t *testing.T) {
 	main := []coinche.Carte{carte("V-coeur"), carte("9-coeur"), carte("A-coeur"), carte("10-coeur"), carte("7-coeur"), carte("A-pique"), carte("A-trefle"), carte("8-carreau")}
 	options := coinche.OptionsEnchere{Passe: true, Surcoinche: true}
+	vue := vueEncheres(0, main, options, annonce(0, coinche.AtoutCoeur, coinche.A100))
 
-	assert.Equal(t, coinche.NouvellePasse(), Bot{}.Encherir(vueEncheres(0, main, options, annonce(0, coinche.AtoutCoeur, coinche.A100))))
+	assert.Equal(t, coinche.Surcoinche, Bot{}.Encherir(vue).Type)
+	assert.Equal(t, coinche.NouvellePasse(), Bot{Profil: Bernard}.Encherir(vue), "le prudent ne surcoinche jamais")
 }
 
 func TestSoutientSonPartenaire(t *testing.T) {
