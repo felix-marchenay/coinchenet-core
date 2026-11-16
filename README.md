@@ -128,24 +128,43 @@ Toute la configuration passe par des variables d'environnement.
 
 ## Déploiement
 
-Le dossier [`deploy/`](deploy) contient une stack de production prête à l'emploi : Caddy (HTTPS automatique, WebSocket), deux instances du serveur, Postgres et Redis.
+Le dossier [`deploy/`](deploy) contient la stack de production : Caddy (HTTPS automatique, WebSocket), deux instances du serveur, Postgres et Redis. L'API et le client web ([coincheweb](https://github.com/felix-marchenay/coincheweb)) ont chacun leur domaine (`COINCHE_DOMAINE`, `COINCHE_DOMAINE_WEB`). Caddy sert le client depuis `web/courant`.
 
-```bash
-# Sur un serveur avec Docker, le DNS du domaine pointant vers lui :
-cd deploy
-cp .env.exemple .env      # domaine, mot de passe Postgres, identifiants OAuth
-docker compose up -d
-```
+### Déploiement continu
 
-La CI (GitHub Actions) lance le lint, les tests unitaires et d'intégration, puis une simulation. À chaque push sur `master` et à chaque tag `v*`, elle publie l'image `ghcr.io/felix-marchenay/coinchenet-core`. Si le paquet GHCR est privé, faire un `docker login ghcr.io` sur le serveur, ou rendre le paquet public.
+Chaque merge sur `master` part en production :
 
-Mettre à jour la production :
+- **API** : la CI publie `ghcr.io/felix-marchenay/coinchenet-core:sha-<commit>`, puis lance sur le serveur `coinchenet-deployer api <commit>` ([`deploy/deployer.sh`](deploy/deployer.sh)). Le script vérifie que le commit est sur `master` et y lit `compose.yaml` et `Caddyfile`. Il change ensuite d'image et attend que les instances soient saines. Si elles ne démarrent pas, il revient à la version précédente.
+- **Client web** : la CI de coincheweb construit le client et envoie l'archive à `coinchenet-deployer web <commit>`. Le script la publie d'un bloc et garde les 5 dernières versions.
 
-```bash
-docker compose pull && docker compose up -d
-```
+La CI se connecte en SSH avec l'utilisateur `deploiement`. Chacune de ses clés est restreinte à une seule commande (`restrict,command=…`), qui ne peut que déployer.
 
 Les parties en cours sont reprises depuis le journal par les nouvelles instances, et les joueurs sont reconnectés automatiquement.
+
+Réglages GitHub de chaque dépôt (*Settings → Secrets and variables → Actions*) :
+
+| Nom | Type | Valeur |
+|-----|------|--------|
+| `DEPLOY_SSH_KEY` | secret | Clé privée propre à la CI de ce dépôt |
+| `DEPLOY_HOST` | variable | Adresse du serveur |
+| `DEPLOY_KNOWN_HOSTS` | variable | Clé d'hôte du serveur (`<adresse> ssh-ed25519 …`) |
+| `VITE_API_URL` | variable | coincheweb seulement : `https://<COINCHE_DOMAINE>` |
+
+### Installer un serveur
+
+```bash
+# Docker installé, DNS des deux domaines vers le serveur ; en root, depuis une copie de deploy/ :
+sh preparer-serveur.sh "<clé publique CI coinchenet-core>" "<clé publique CI coincheweb>"
+vi /opt/coinchenet/.env      # domaines, mot de passe Postgres, identifiants OAuth
+cd /opt/coinchenet && sudo -u deploiement docker compose up -d
+```
+
+### Revenir à une version
+
+```bash
+sudo -u deploiement coinchenet-deployer api <commit de master>
+cd /opt/coinchenet/web && sudo -u deploiement ln -sfn versions/<commit> courant
+```
 
 Exploitation :
 - **Métriques** : port 9090, non exposé (`/metrics`), à collecter depuis le réseau Docker.

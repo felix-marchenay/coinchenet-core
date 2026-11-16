@@ -9,9 +9,10 @@ on:
 permissions:
   contents: read
 
+# Un déploiement en cours n'est jamais interrompu : seules les PR annulent l'exécution précédente.
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   GO_VERSION: "1.27.4"
@@ -90,7 +91,7 @@ jobs:
             type=ref,event=branch
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
-            type=sha
+            type=sha,format=long
       - uses: docker/build-push-action@v7
         with:
           context: .
@@ -100,3 +101,25 @@ jobs:
           build-args: VERSION=${{ github.ref_name }}-${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+  deploiement:
+    name: Déploiement
+    needs: image
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    concurrency:
+      group: deploiement
+      cancel-in-progress: false
+    steps:
+      # La clé ne permet que de lancer coinchenet-deployer api avec le commit (deploy/deployer.sh).
+      - name: Déploiement sur le serveur
+        env:
+          CLE: ${{ secrets.DEPLOY_SSH_KEY }}
+          HOTE: ${{ vars.DEPLOY_HOST }}
+          HOTES_CONNUS: ${{ vars.DEPLOY_KNOWN_HOSTS }}
+        run: |
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$CLE" > ~/.ssh/deploiement
+          chmod 600 ~/.ssh/deploiement
+          printf '%s\n' "$HOTES_CONNUS" > ~/.ssh/known_hosts
+          ssh -i ~/.ssh/deploiement -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "deploiement@$HOTE" "$GITHUB_SHA"
