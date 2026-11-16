@@ -7,6 +7,8 @@ import (
 	"slices"
 	"time"
 
+	"github.com/google/uuid"
+
 	"github.com/felix-marchenay/coinchenet-core/internal/table"
 )
 
@@ -38,6 +40,9 @@ type Parametres struct {
 	AttenteDuoContreSolos time.Duration
 	DelaiAcceptation      time.Duration
 	DelaiInvitation       time.Duration
+	// AttenteParBot : sans assez d'adversaires, un bot rejoint la table du plus ancien ticket à chaque
+	// palier de cette attente, jusqu'à la compléter. 0 désactive les bots.
+	AttenteParBot time.Duration
 }
 
 func ParametresParDefaut() Parametres {
@@ -49,6 +54,7 @@ func ParametresParDefaut() Parametres {
 		AttenteDuoContreSolos: 30 * time.Second,
 		DelaiAcceptation:      15 * time.Second,
 		DelaiInvitation:       time.Minute,
+		AttenteParBot:         5 * time.Second,
 	}
 }
 
@@ -61,13 +67,15 @@ func (p Parametres) Fenetre(attente time.Duration) int {
 	return min(p.FenetreInitiale+pas*p.Elargissement, p.FenetreMax)
 }
 
+// Appariement : un Joueur zéro dans une équipe est un siège tenu par un bot.
 type Appariement struct {
 	EquipeA [2]table.Joueur
 	EquipeB [2]table.Joueur
 	Tickets []Ticket
 }
 
-// Apparier forme le plus de tables possible, en servant d'abord les tickets qui attendent depuis le plus longtemps.
+// Apparier forme le plus de tables possible, en servant d'abord les tickets qui attendent depuis le plus
+// longtemps. Les tables entre humains passent avant celles que des bots complètent.
 func Apparier(tickets []Ticket, maintenant time.Time, p Parametres) []Appariement {
 	ordre := slices.Clone(tickets)
 	slices.SortStableFunc(ordre, func(a, b Ticket) int {
@@ -75,6 +83,36 @@ func Apparier(tickets []Ticket, maintenant time.Time, p Parametres) []Appariemen
 	})
 
 	utilises := map[string]bool{}
+	res := apparierHumains(ordre, utilises, maintenant, p)
+	if p.AttenteParBot <= 0 {
+		return res
+	}
+	for _, pivot := range ordre {
+		if utilises[pivot.ID] {
+			continue
+		}
+		var autres []Ticket
+		for _, c := range ordre {
+			if c.ID != pivot.ID && !utilises[c.ID] {
+				autres = append(autres, c)
+			}
+		}
+		slices.SortStableFunc(autres, func(a, b Ticket) int {
+			return cmp.Compare(math.Abs(a.Elo()-pivot.Elo()), math.Abs(b.Elo()-pivot.Elo()))
+		})
+		a := avecBots(pivot, autres, maintenant.Sub(pivot.EntreeLe), p)
+		if a == nil {
+			continue
+		}
+		for _, t := range a.Tickets {
+			utilises[t.ID] = true
+		}
+		res = append(res, *a)
+	}
+	return res
+}
+
+func apparierHumains(ordre []Ticket, utilises map[string]bool, maintenant time.Time, p Parametres) []Appariement {
 	var res []Appariement
 	for _, pivot := range ordre {
 		if utilises[pivot.ID] {
@@ -126,6 +164,43 @@ func Apparier(tickets []Ticket, maintenant time.Time, p Parametres) []Appariemen
 		res = append(res, *a)
 	}
 	return res
+}
+
+// avecBots réunit au pivot jusqu'à trois humains de la file, quel que soit leur ELO : la partie ne
+// sera pas classée. Elle part dès que les bots que l'attente du pivot autorise complètent la table.
+func avecBots(pivot Ticket, autres []Ticket, attente time.Duration, p Parametres) *Appariement {
+	bots := min(3, int(attente/p.AttenteParBot))
+	if bots == 0 {
+		return nil
+	}
+	tickets := []Ticket{pivot}
+	humains := len(pivot.Joueurs)
+	for _, t := range autres {
+		if humains+len(t.Joueurs) <= 3 {
+			tickets = append(tickets, t)
+			humains += len(t.Joueurs)
+		}
+	}
+	if humains+bots < 4 {
+		return nil
+	}
+
+	a := &Appariement{Tickets: tickets}
+	var solos []table.Joueur
+	for _, t := range tickets {
+		if t.Duo() {
+			a.EquipeA = [2]table.Joueur{t.Joueurs[0], t.Joueurs[1]}
+		} else {
+			solos = append(solos, t.Joueurs[0])
+		}
+	}
+	slices.SortStableFunc(solos, func(a, b table.Joueur) int { return cmp.Compare(b.Elo, a.Elo) })
+	// Un duo affronte les autres ; sinon le plus fort fait équipe avec un bot.
+	if a.EquipeA[0].ID == uuid.Nil {
+		a.EquipeA[0], solos = solos[0], solos[1:]
+	}
+	copy(a.EquipeB[:], solos)
+	return a
 }
 
 func duoContreDuo(a, b Ticket) *Appariement {

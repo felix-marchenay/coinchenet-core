@@ -101,7 +101,7 @@ func TestPropositionAccepteeParTous(t *testing.T) {
 	e = m.Appliquer(Commande{Type: CmdAccepter, Joueur: js[3], Proposition: trouvee.Proposition}, t0.Add(3*time.Second))
 
 	require.Len(t, e.Tables, 1)
-	assert.Equal(t, trouvee.EquipeA, e.Tables[0].EquipeA)
+	assert.Equal(t, [2]table.Joueur{*trouvee.EquipeA[0], *trouvee.EquipeA[1]}, e.Tables[0].EquipeA)
 	assert.Len(t, e.Tables[0].Attentes, 4)
 	assert.Equal(t, 3*time.Second, e.Tables[0].Attentes[0])
 	assert.Empty(t, m.Etat.Propositions)
@@ -126,6 +126,7 @@ func TestRefusRemetLesAutresEnFile(t *testing.T) {
 
 func TestPropositionExpiree(t *testing.T) {
 	m := moteurDeTest()
+	m.Parametres.AttenteParBot = 0
 	js := joueurs(4)
 	rejoindre(m, js...)
 	e := m.Tick(t0)
@@ -138,6 +139,26 @@ func TestPropositionExpiree(t *testing.T) {
 	assert.True(t, donnees[MessageAnnulee](t, e, js[0].ID, MsgAnnulee).EnFile)
 	assert.False(t, donnees[MessageAnnulee](t, e, js[2].ID, MsgAnnulee).EnFile)
 	assert.Equal(t, 2, m.NbEnFile())
+}
+
+func TestDesBotsCompletentLaTableDuJoueurSeul(t *testing.T) {
+	m := moteurDeTest()
+	j := joueurs(1)[0]
+	rejoindre(m, j)
+
+	assert.Empty(t, m.Tick(t0.Add(14*time.Second)).Notifications, "un bot toutes les 5 s : il en faut trois")
+	e := m.Tick(t0.Add(15 * time.Second))
+	require.Len(t, e.Notifications, 1, "les bots ne reçoivent rien")
+	trouvee := donnees[MessageTrouvee](t, e, j.ID, MsgTrouvee)
+	assert.Equal(t, j, *trouvee.EquipeA[0])
+	assert.Nil(t, trouvee.EquipeA[1])
+	assert.Equal(t, [2]*table.Joueur{}, trouvee.EquipeB)
+
+	e = m.Appliquer(Commande{Type: CmdAccepter, Joueur: j, Proposition: trouvee.Proposition}, t0.Add(16*time.Second))
+	require.Len(t, e.Tables, 1, "les bots acceptent d'office")
+	assert.Equal(t, [2]table.Joueur{j, {}}, e.Tables[0].EquipeA)
+	assert.Equal(t, [2]table.Joueur{}, e.Tables[0].EquipeB)
+	assert.Equal(t, []time.Duration{16 * time.Second}, e.Tables[0].Attentes)
 }
 
 func TestAccepterUnePropositionInconnue(t *testing.T) {

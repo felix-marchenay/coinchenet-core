@@ -23,7 +23,12 @@ type Type string
 const (
 	Classee Type = "classee"
 	Privee  Type = "privee"
+	// AvecBots : partie de la file que des bots complètent, faute d'adversaires ; elle ne compte pas
+	// pour l'ELO et, comme en privé, un bot reprend le siège d'un joueur qui abandonne.
+	AvecBots Type = "avec_bots"
 )
+
+var Types = []Type{Classee, Privee, AvecBots}
 
 type Statut string
 

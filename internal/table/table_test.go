@@ -552,6 +552,36 @@ func TestRestaurationEnCoursDePartie(t *testing.T) {
 	})
 }
 
+func TestTableDeLaFileCompleteeParDesBots(t *testing.T) {
+	synctest.Test(t, func(t *testing.T) {
+		env := nouvelEnvironnement()
+		alice := joueur("Alice", 1500)
+		tb, err := NouvelleTableClassee(uuid.New(), [2]Joueur{alice, {}}, [2]Joueur{}, OptionsClassees(), env.deps, env.cfg)
+		require.NoError(t, err)
+		assert.Equal(t, AvecBots, tb.Type(), "une partie avec bots ne compte pas pour l'ELO")
+		lancerActeur(t, tb)
+		tb.Envoyer(commande(CmdConnexion, alice, "a", nil))
+		synctest.Wait()
+
+		var etat EtatTable
+		require.True(t, env.diffuseur.dernier(t, alice.ID, MsgEtat, &etat))
+		assert.Equal(t, StatutEnCours, etat.Statut)
+		pseudos := map[string]bool{}
+		for s := coinche.Siege(1); s < coinche.NbSieges; s++ {
+			require.True(t, etat.Sieges[s].Bot)
+			famille, _, ok := bot.Bots{}.Famille(etat.Sieges[s].Profil)
+			require.True(t, ok)
+			assert.True(t, strings.HasSuffix(etat.Sieges[s].Joueur.Pseudo, " "+famille), etat.Sieges[s].Joueur.Pseudo)
+			pseudos[etat.Sieges[s].Joueur.Pseudo] = true
+		}
+		assert.Len(t, pseudos, 3)
+
+		tb.Envoyer(commande(CmdChat, alice, "a", DonneesChat{Texte: "salut"}))
+		synctest.Wait()
+		assert.Equal(t, []string{"chat_restreint"}, env.diffuseur.codesErreur(alice.ID), "la file réunit des inconnus : chat prédéfini")
+	})
+}
+
 func TestRepriseDUneTable(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		env := nouvelEnvironnement()

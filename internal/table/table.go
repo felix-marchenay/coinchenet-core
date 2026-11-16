@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"slices"
 	"strings"
 	"time"
 	"unicode"
@@ -135,14 +136,32 @@ func NouvelleTablePrivee(id uuid.UUID, createur Joueur, code string, options Opt
 	return t, nil
 }
 
-// NouvelleTableClassee crée une table complète : l'équipe A aux sièges 0 et 2, l'équipe B aux sièges 1 et 3.
+// NouvelleTableClassee crée la table d'une partie de la file : l'équipe A aux sièges 0 et 2, l'équipe B
+// aux sièges 1 et 3. Un Joueur zéro laisse son siège à un bot, et la partie est alors AvecBots.
 func NouvelleTableClassee(id uuid.UUID, equipeA, equipeB [2]Joueur, options Options, deps Dependances, cfg Config) (*Table, error) {
 	if err := options.Valider(); err != nil {
 		return nil, err
 	}
-	t := nouvelleTable(id, Classee, options, deps, cfg)
-	for i, j := range [...]Joueur{equipeA[0], equipeB[0], equipeA[1], equipeB[1]} {
-		t.sieges[i] = &occupant{joueur: j, connexions: map[string]struct{}{}}
+	joueurs := [...]Joueur{equipeA[0], equipeB[0], equipeA[1], equipeB[1]}
+	typ := Classee
+	if slices.ContainsFunc(joueurs[:], func(j Joueur) bool { return j.ID == uuid.Nil }) {
+		typ = AvecBots
+	}
+	t := nouvelleTable(id, typ, options, deps, cfg)
+	for i, j := range joueurs {
+		if j.ID != uuid.Nil {
+			t.sieges[i] = &occupant{joueur: j, connexions: map[string]struct{}{}}
+		}
+	}
+	for i, o := range t.sieges {
+		if o != nil {
+			continue
+		}
+		profil, nom, err := t.nouveauBot("")
+		if err != nil {
+			return nil, err
+		}
+		t.sieges[i] = &occupant{bot: true, profil: profil, joueur: Joueur{Pseudo: nom}}
 	}
 	return t, nil
 }
@@ -632,8 +651,8 @@ func validerChat(typ Type, d DonneesChat) (Chat, error) {
 		}
 		return Chat{}, ErrChatInvalide
 	}
-	if typ == Classee {
-		return Chat{}, erreur("chat_restreint", "seuls les messages prédéfinis sont autorisés en partie classée")
+	if typ != Privee {
+		return Chat{}, erreur("chat_restreint", "seuls les messages prédéfinis sont autorisés dans les parties de la file")
 	}
 	texte := nettoyerTexte(d.Texte)
 	if texte == "" || len([]rune(texte)) > 500 {

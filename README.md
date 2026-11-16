@@ -110,6 +110,7 @@ Toute la configuration passe par des variables d'environnement.
 | `COINCHE_DELAI_BOT` | `800ms` | Rythme des actions automatiques |
 | `COINCHE_DELAI_DEMARRAGE` / `COINCHE_DELAI_ENTRE_MENES` | `3s` / `3s` | Pauses de mise en scène |
 | `COINCHE_DELAI_LOBBY` | `30m` | Durée de vie d'une table privée non lancée |
+| `COINCHE_ATTENTE_PAR_BOT` | `5s` | Faute d'adversaires dans la file, un bot rejoint la table à chaque palier de cette attente (`0` : jamais) |
 | `COINCHE_INTERVALLE_REPRISE` | `10s` | Fréquence de recherche des parties orphelines |
 | `COINCHE_DEBIT_WS` | `10` | Messages par seconde acceptés d'un client WebSocket |
 | `COINCHE_ARRET_GRACIEUX` | `20s` | Temps laissé à l'arrêt propre |

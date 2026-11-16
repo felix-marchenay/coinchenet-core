@@ -130,3 +130,38 @@ func TestEloDUnTicket(t *testing.T) {
 	assert.True(t, duo("x", 1, 1, 0).Duo())
 	assert.False(t, solo("a", 1, 0).Duo())
 }
+
+func TestUnBotRejointLaTableToutesLesCinqSecondes(t *testing.T) {
+	p := ParametresParDefaut()
+	assert.Empty(t, Apparier([]Ticket{solo("a", 1500, 14*time.Second)}, t0, p))
+
+	res := Apparier([]Ticket{solo("a", 1500, 15*time.Second)}, t0, p)
+	require.Len(t, res, 1)
+	assert.Equal(t, "a", res[0].EquipeA[0].Pseudo)
+	assert.Equal(t, [3]table.Joueur{}, [3]table.Joueur{res[0].EquipeA[1], res[0].EquipeB[0], res[0].EquipeB[1]})
+
+	p.AttenteParBot = 0
+	assert.Empty(t, Apparier([]Ticket{solo("a", 1500, time.Hour)}, t0, p), "bots désactivés")
+}
+
+func TestLesJoueursEnFileRejoignentLaTableAvantLesBots(t *testing.T) {
+	// Deux joueurs d'ELO très éloigné : la partie n'étant pas classée, ils jouent ensemble, chacun avec un bot.
+	res := Apparier([]Ticket{solo("a", 1200, 10*time.Second), solo("b", 1900, 0)}, t0, ParametresParDefaut())
+	require.Len(t, res, 1)
+	assert.Equal(t, [2]string{"b", ""}, [2]string{res[0].EquipeA[0].Pseudo, res[0].EquipeA[1].Pseudo})
+	assert.Equal(t, [2]string{"a", ""}, [2]string{res[0].EquipeB[0].Pseudo, res[0].EquipeB[1].Pseudo})
+
+	res = Apparier([]Ticket{duo("x", 1500, 1500, 5*time.Second), solo("b", 1500, 0)}, t0, ParametresParDefaut())
+	require.Len(t, res, 1)
+	assert.Equal(t, [2]string{"x1", "x2"}, [2]string{res[0].EquipeA[0].Pseudo, res[0].EquipeA[1].Pseudo}, "le duo reste ensemble")
+	assert.Equal(t, [2]string{"b", ""}, [2]string{res[0].EquipeB[0].Pseudo, res[0].EquipeB[1].Pseudo})
+}
+
+func TestLesTablesEntreHumainsPassentAvantLesBots(t *testing.T) {
+	tickets := []Ticket{solo("a", 1000, 10*time.Second), solo("b", 1800, 0), solo("c", 1800, 0), solo("d", 1800, 0), solo("e", 1800, 0)}
+
+	res := Apparier(tickets, t0, ParametresParDefaut())
+
+	require.Len(t, res, 1, "a n'a droit qu'à deux bots : il attend")
+	assert.ElementsMatch(t, []string{"b", "c", "d", "e"}, ids(res[0]))
+}

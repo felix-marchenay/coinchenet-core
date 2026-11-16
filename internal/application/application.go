@@ -94,9 +94,11 @@ func Demarrer(ctx context.Context, cfg config.Config, log *slog.Logger, version 
 	}, a.bus, verrous, redisstore.NouveauxCodes(a.redis), a.base)
 	metriques = observabilite.NouvellesMetriques(a.registre.NbTables)
 
+	parametresFile := matchmaking.ParametresParDefaut()
+	parametresFile.AttenteParBot = cfg.AttenteParBot
 	file := matchmaking.NouveauService(matchmaking.Config{
 		Instance:   cfg.Instance,
-		Parametres: matchmaking.ParametresParDefaut(),
+		Parametres: parametresFile,
 	}, redisstore.NouvelleFileMatchmaking(a.redis), redisstore.NouvelEtatMatchmaking(a.redis), verrous, a.registre, diffuseur, metriques, log)
 
 	authentification := auth.NouveauService(auth.Config{

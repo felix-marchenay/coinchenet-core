@@ -118,7 +118,7 @@ File classée et tables privées s'excluent :
 | `partie.jouer` | `{"carte": "V-coeur"}` | Joue une carte. |
 | `partie.present` | – | Reprend la main après avoir été déclaré absent. |
 | `partie.abandonner` | – | Partie classée : forfait immédiat. Partie privée : un bot reprend le siège. |
-| `partie.chat` | `{"texte": "…"}` (privée, 500 caractères maximum) ou `{"message": "bien_joue"}` | En partie classée, seuls les messages prédéfinis sont acceptés : `bonne_chance`, `bien_joue`, `merci`, `desole`, `oups`, `gg`. |
+| `partie.chat` | `{"texte": "…"}` (privée, 500 caractères maximum) ou `{"message": "bien_joue"}` | Dans les parties de la file (classées ou avec bots), seuls les messages prédéfinis sont acceptés : `bonne_chance`, `bien_joue`, `merci`, `desole`, `oups`, `gg`. |
 
 ### Messages du serveur
 
@@ -126,7 +126,7 @@ Les messages de partie portent `table` (uuid) et `seq`, le numéro de l'événem
 
 | Type | Données principales |
 |---|---|
-| `partie.etat` | Instantané complet : `type`, `statut` (`attente`, `en_cours`, `terminee`), `code`, `createur`, `options`, `sieges[4]` (`joueur`, `bot`, `profil`, la famille d'un bot, `statut`, `retour_avant`), `moi`, `echeance` et `jeu`. `jeu` contient : `scores`, `historique`, ma `main`, et la mène en cours dans `mene` (`phase`, `tour`, `donneur`, `encheres`, `contrat`, `preneur`, `multiplicateur`, `pli_en_cours`, `plis`, `nb_cartes`, `belote` une fois annoncée, et pour le joueur dont c'est le tour, `cartes_jouables` ou `options_enchere`). |
+| `partie.etat` | Instantané complet : `type` (`classee`, `privee` ou `avec_bots`), `statut` (`attente`, `en_cours`, `terminee`), `code`, `createur`, `options`, `sieges[4]` (`joueur`, `bot`, `profil`, la famille d'un bot, `statut`, `retour_avant`), `moi`, `echeance` et `jeu`. `jeu` contient : `scores`, `historique`, ma `main`, et la mène en cours dans `mene` (`phase`, `tour`, `donneur`, `encheres`, `contrat`, `preneur`, `multiplicateur`, `pli_en_cours`, `plis`, `nb_cartes`, `belote` une fois annoncée, et pour le joueur dont c'est le tour, `cartes_jouables` ou `options_enchere`). |
 | `partie.commencee` | `{table, type}` : une partie démarre (ou reprend). La connexion la rejoint d'elle-même. |
 | `partie.donne` | `{mene, donneur, main}` : la main du joueur seulement. |
 | `partie.tour` | `{siege, phase, echeance}`. Le joueur concerné reçoit en plus `cartes_jouables` ou `options_enchere` (`{passe, annonce_min, coinche, surcoinche}`). |
@@ -143,8 +143,8 @@ Les messages de partie portent `table` (uuid) et `seq`, le numéro de l'événem
 | `table.exclu` | Le créateur m'a retiré de la table ; je ne peux plus la rejoindre (code `exclu`). |
 | `file.rejointe` | `{mode: "solo"\|"duo", depuis, partenaire?}` |
 | `file.quittee` | `{raison}`. Raisons : `demande`, `deconnexion`, `partenaire`. |
-| `file.trouvee` | `{proposition, expire_le, equipe_a, equipe_b}` : il faut accepter dans les 15 s. |
-| `file.acceptation` | `{proposition, acceptes}` : progression des acceptations. |
+| `file.trouvee` | `{proposition, expire_le, equipe_a, equipe_b}` : il faut accepter dans les 15 s. Un siège `null` est tenu par un bot : faute d'adversaires, un bot rejoint la table toutes les 5 s, et la partie (type `avec_bots`) ne compte alors pas pour l'ELO. |
+| `file.acceptation` | `{proposition, acceptes}` : progression des acceptations, sur 4 ; les bots acceptent d'office. |
 | `file.annulee` | `{proposition, raison, en_file}`. Raisons : `refus`, `delai`, `erreur`. Si `en_file` vaut vrai, le joueur est remis en file avec son ancienneté. |
 | `duo.invitation` / `duo.envoyee` / `duo.refusee` / `duo.expiree` | `{invitation, de, a, expire_le}` |
 
