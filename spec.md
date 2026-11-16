@@ -37,7 +37,7 @@
 ### 2.1 Table et ordre de jeu
 
 - 4 sièges numérotés de 0 à 3. L'équipe A occupe les sièges 0 et 2, l'équipe B les sièges 1 et 3 : les partenaires sont face à face.
-- On joue dans le sens antihoraire (siège `n` → siège `(n+1) % 4`).
+- On joue dans le sens horaire (siège `n` → siège `(n+1) % 4`) : vu du dessus, le joueur suivant est à gauche.
 - Le premier donneur est tiré au sort, puis le rôle de donneur tourne d'un siège à chaque mène, redistributions comprises.
 - Le joueur qui suit le donneur parle en premier aux enchères et entame le premier pli.
 - Le gagnant d'un pli entame le pli suivant.
