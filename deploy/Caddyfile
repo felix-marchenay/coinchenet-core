@@ -1,0 +1,22 @@
+# Certificat HTTPS automatique (Let's Encrypt) et répartition entre les instances.
+{$COINCHE_DOMAINE} {
+	encode zstd gzip
+
+	# Les métriques et le profilage (port 9090) ne sont jamais exposés.
+	reverse_proxy {
+		dynamic a {
+			name serveur
+			port 8080
+			refresh 5s
+		}
+		lb_policy least_conn
+		lb_try_duration 5s
+		fail_duration 30s
+		header_up X-Forwarded-For {remote_host}
+	}
+
+	log {
+		output stdout
+		format json
+	}
+}

@@ -1,0 +1,11 @@
+.git
+.github
+.cache
+bin
+coverage.out
+coverage.html
+.env
+deploy
+compose*.yaml
+Dockerfile
+*.md
