@@ -575,10 +575,6 @@ func TestTableDeLaFileCompleteeParDesBots(t *testing.T) {
 			pseudos[etat.Sieges[s].Joueur.Pseudo] = true
 		}
 		assert.Len(t, pseudos, 3)
-
-		tb.Envoyer(commande(CmdChat, alice, "a", DonneesChat{Texte: "salut"}))
-		synctest.Wait()
-		assert.Equal(t, []string{"chat_restreint"}, env.diffuseur.codesErreur(alice.ID), "la file réunit des inconnus : chat prédéfini")
 	})
 }
 
@@ -653,10 +649,17 @@ func TestChat(t *testing.T) {
 		tc.table.Envoyer(commande(CmdChat, alice, "c-A1", DonneesChat{Message: "bonne_chance"}))
 		synctest.Wait()
 
-		assert.Equal(t, []string{"chat_restreint", "chat_invalide"}, env.diffuseur.codesErreur(alice.ID))
-		var chat Chat
-		require.True(t, env.diffuseur.dernier(t, bob.ID, MsgChat, &chat))
-		assert.Equal(t, Chat{Siege: 0, Pseudo: "A1", Message: "bonne_chance"}, chat)
+		assert.Equal(t, []string{"chat_invalide"}, env.diffuseur.codesErreur(alice.ID))
+		var chats []Chat
+		for _, m := range env.diffuseur.de(bob.ID, MsgChat) {
+			var c Chat
+			require.NoError(t, json.Unmarshal(m, &c))
+			chats = append(chats, c)
+		}
+		assert.Equal(t, []Chat{
+			{Siege: 0, Pseudo: "A1", Texte: "j'ai le valet"},
+			{Siege: 0, Pseudo: "A1", Message: "bonne_chance"},
+		}, chats, "le texte libre est permis en partie classée")
 
 		for range 10 {
 			tc.table.Envoyer(commande(CmdChat, bob, "c-B1", DonneesChat{Message: "gg"}))
@@ -668,18 +671,18 @@ func TestChat(t *testing.T) {
 }
 
 func TestValiderChat(t *testing.T) {
-	c, err := validerChat(Privee, DonneesChat{Texte: "  salut\x00 à tous \n"})
+	c, err := validerChat(DonneesChat{Texte: "  salut\x00 à tous \n"})
 	require.NoError(t, err)
 	assert.Equal(t, "salut à tous", c.Texte)
 
-	_, err = validerChat(Privee, DonneesChat{Texte: "   "})
+	_, err = validerChat(DonneesChat{Texte: "   "})
 	assert.Error(t, err)
 
 	long := make([]rune, 501)
 	for i := range long {
 		long[i] = 'é'
 	}
-	_, err = validerChat(Privee, DonneesChat{Texte: string(long)})
+	_, err = validerChat(DonneesChat{Texte: string(long)})
 	assert.Error(t, err)
 }
 
