@@ -305,7 +305,7 @@ func TestRoutesPubliques(t *testing.T) {
 	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &bots))
 	require.Len(t, bots.Bots, 4)
 	assert.Equal(t, map[string]any{
-		"id": "leo", "nom": "Léo", "style": "casse-cou", "description": bot.Leo.Description,
+		"id": "narvaloche", "famille": "Narvaloche", "style": "casse-cou", "description": bot.Narvaloche.Description,
 	}, bots.Bots[3], "seule la présentation est publique, pas les réglages")
 }
 

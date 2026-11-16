@@ -23,7 +23,7 @@ func TestTournoi(t *testing.T) {
 		somme += l.Elo
 	}
 	assert.InDelta(t, 4*1200, somme, 2, "les écarts se compensent")
-	assert.Contains(t, FormaterTournoi(lignes), "Léo (casse-cou)")
+	assert.Contains(t, FormaterTournoi(lignes), "Narvaloche (casse-cou)")
 }
 
 func TestEcartElo(t *testing.T) {

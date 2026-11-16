@@ -1,10 +1,15 @@
 package coinche
 
-import "math/rand/v2"
+import (
+	"math/rand/v2"
+	"sync"
+)
 
-// HasardDeterministe produit une suite reproductible, pour les tests et les simulations.
+// HasardDeterministe produit une suite reproductible, pour les tests et les simulations. Comme
+// HasardCrypto, il peut être partagé entre les tables.
 type HasardDeterministe struct {
-	r *rand.Rand
+	mu sync.Mutex
+	r  *rand.Rand
 }
 
 func NouveauHasardDeterministe(graine uint64) *HasardDeterministe {
@@ -12,5 +17,7 @@ func NouveauHasardDeterministe(graine uint64) *HasardDeterministe {
 }
 
 func (h *HasardDeterministe) Intn(n int) int {
+	h.mu.Lock()
+	defer h.mu.Unlock()
 	return h.r.IntN(n)
 }

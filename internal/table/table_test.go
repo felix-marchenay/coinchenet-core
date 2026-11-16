@@ -3,6 +3,7 @@ package table
 import (
 	"context"
 	"encoding/json"
+	"strings"
 	"testing"
 	"testing/synctest"
 	"time"
@@ -11,6 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/felix-marchenay/coinchenet-core/internal/bot"
 	"github.com/felix-marchenay/coinchenet-core/internal/coinche"
 	"github.com/felix-marchenay/coinchenet-core/internal/protocole"
 )
@@ -104,10 +106,10 @@ func TestPartiePriveeComplete(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, fin.Scores, restauree.partie.Scores, "le journal rejoue la partie à l'identique")
 		assert.Equal(t, StatutTerminee, restauree.statut)
-		for s, profil := range map[coinche.Siege]string{1: "bernard", 2: "martine", 3: "nadia"} {
-			assert.Equal(t, profil, restauree.sieges[s].profil, "les bots gardent leur profil à la reprise")
+		for s := coinche.Siege(1); s < coinche.NbSieges; s++ {
+			assert.Equal(t, etat.Sieges[s].Profil, restauree.sieges[s].profil, "les bots gardent leur profil à la reprise")
+			assert.Equal(t, etat.Sieges[s].Joueur.Pseudo, restauree.sieges[s].joueur.Pseudo)
 		}
-		assert.Equal(t, "Bernard", restauree.sieges[1].joueur.Pseudo)
 
 		patienter(env.cfg.DelaiFermeture)
 		synctest.Wait()
@@ -119,7 +121,7 @@ func TestPartiePriveeComplete(t *testing.T) {
 	})
 }
 
-func TestProfilsDesBots(t *testing.T) {
+func TestFamillesDesBots(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		env := nouvelEnvironnement()
 		alice := joueur("Alice", 1200)
@@ -128,22 +130,26 @@ func TestProfilsDesBots(t *testing.T) {
 		lancerActeur(t, tb)
 		tb.Envoyer(commande(CmdConnexion, alice, "a", nil))
 
-		tb.Envoyer(commande(CmdBot, alice, "a", DonneesBot{Siege: 1, Profil: "leo"}))
-		tb.Envoyer(commande(CmdBot, alice, "a", DonneesBot{Siege: 2, Profil: "leo"}))
-		tb.Envoyer(commande(CmdBot, alice, "a", DonneesBot{Siege: 2, Profil: "zorro"}))
-		tb.Envoyer(commande(CmdBot, alice, "a", DonneesBot{Siege: 2}))
+		tb.Envoyer(commande(CmdBot, alice, "a", DonneesBot{Siege: 1, Profil: "narvaloche"}))
+		tb.Envoyer(commande(CmdBot, alice, "a", DonneesBot{Siege: 2, Profil: "narvaloche"}))
+		tb.Envoyer(commande(CmdBot, alice, "a", DonneesBot{Siege: 3, Profil: "zorro"}))
 		tb.Envoyer(commande(CmdBot, alice, "a", DonneesBot{Siege: 3}))
 		synctest.Wait()
-		assert.Equal(t, []string{"profil_pris", "profil_inconnu"}, env.diffuseur.codesErreur(alice.ID))
+		assert.Equal(t, []string{"profil_inconnu"}, env.diffuseur.codesErreur(alice.ID))
 
 		var etat EtatTable
 		require.True(t, env.diffuseur.dernier(t, alice.ID, MsgEtat, &etat))
-		for s, attendu := range map[coinche.Siege][2]string{1: {"leo", "Léo"}, 2: {"bernard", "Bernard"}, 3: {"martine", "Martine"}} {
+		for s := coinche.Siege(1); s < coinche.NbSieges; s++ {
 			require.NotNil(t, etat.Sieges[s])
 			assert.True(t, etat.Sieges[s].Bot)
-			assert.Equal(t, attendu[0], etat.Sieges[s].Profil, "siège %d", s)
-			assert.Equal(t, attendu[1], etat.Sieges[s].Joueur.Pseudo, "siège %d", s)
+			famille, prenoms, ok := bot.Bots{}.Famille(etat.Sieges[s].Profil)
+			require.True(t, ok, "siège %d", s)
+			prenom, ok := strings.CutSuffix(etat.Sieges[s].Joueur.Pseudo, " "+famille)
+			assert.True(t, ok, "le bot porte le nom de sa famille : %s", etat.Sieges[s].Joueur.Pseudo)
+			assert.Contains(t, prenoms, prenom)
 		}
+		assert.Equal(t, "narvaloche", etat.Sieges[2].Profil, "plusieurs bots d'une même famille")
+		assert.NotEqual(t, etat.Sieges[1].Joueur.Pseudo, etat.Sieges[2].Joueur.Pseudo, "chacun son prénom")
 		assert.Empty(t, etat.Sieges[0].Profil, "un humain n'a pas de profil")
 	})
 }
@@ -320,6 +326,9 @@ func TestDelaiExpireEtAbsence(t *testing.T) {
 			}
 		}
 		assert.NotEmpty(t, env.diffuseur.de(alice.ID, MsgCarte), "les bots jouent à la place des absents")
+		for _, o := range tc.table.sieges {
+			assert.NotEmpty(t, o.remplacant, "l'absent est remplacé par un bot d'une famille tirée au hasard")
+		}
 
 		tc.table.Envoyer(commande(CmdPresent, alice, "c-"+alice.Pseudo, nil))
 		synctest.Wait()

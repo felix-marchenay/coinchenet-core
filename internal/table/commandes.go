@@ -55,7 +55,7 @@ type DonneesSiege struct {
 	Siege coinche.Siege `json:"siege"`
 }
 
-// DonneesBot : sans profil, la table attribue le premier qui n'est pas déjà assis.
+// DonneesBot : sans profil, la table en tire un au hasard.
 type DonneesBot struct {
 	Siege  coinche.Siege `json:"siege"`
 	Profil string        `json:"profil,omitempty"`

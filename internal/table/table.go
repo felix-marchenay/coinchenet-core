@@ -17,8 +17,10 @@ import (
 type occupant struct {
 	joueur Joueur
 	bot    bool
-	// profil du bot assis ; vide pour un humain, que le profil par défaut remplace s'il est absent.
-	profil        string
+	// profil du bot assis ; vide pour un humain.
+	profil string
+	// remplacant : profil du bot qui joue pour un humain absent, tiré au hasard et gardé jusqu'à la fin.
+	remplacant    string
 	abandon       bool
 	absent        bool
 	delaisExpires int

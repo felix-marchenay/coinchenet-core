@@ -137,15 +137,14 @@ type Annuaire interface {
 	Dissocier(ctx context.Context, joueur, table uuid.UUID) error
 }
 
-// Decideur choisit les actions des sièges tenus par un bot, selon le profil de chacun ; un profil
-// vide (joueur absent) ou inconnu joue avec le profil par défaut.
+// Decideur choisit les actions des sièges tenus par un bot, selon le profil de chacun : c'est sa
+// famille qui décide de sa façon de jouer. Un profil inconnu joue avec le profil par défaut.
 type Decideur interface {
 	Encherir(profil string, v coinche.Vue) coinche.Enchere
 	Jouer(profil string, v coinche.Vue) coinche.Carte
-	// Profils liste les profils proposés, dans l'ordre où ils sont attribués par défaut.
 	Profils() []string
-	// Nom renvoie le prénom affiché d'un profil.
-	Nom(profil string) (string, bool)
+	// Famille renvoie le nom de famille d'un profil et les prénoms que portent ses bots.
+	Famille(profil string) (string, []string, bool)
 }
 
 // Metriques est optionnel.
@@ -241,7 +240,6 @@ var (
 	ErrSiegeInvalide        = erreur(protocole.CodeRequeteInvalide, "siège invalide")
 	ErrSiegeOccupe          = erreur("siege_occupe", "ce siège est occupé")
 	ErrProfilInconnu        = erreur("profil_inconnu", "profil de bot inconnu")
-	ErrProfilPris           = erreur("profil_pris", "ce bot est déjà assis à la table")
 	ErrSiegeLibre           = erreur("siege_libre", "ce siège est libre")
 	ErrTableIncomplete      = erreur("table_incomplete", "il faut quatre joueurs pour lancer la partie")
 	ErrPartieNonCommencee   = erreur("partie_non_commencee", "la partie n'a pas commencé")

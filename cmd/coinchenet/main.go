@@ -133,7 +133,7 @@ func simuler(args []string) error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("graine %d, %s contre %s\n%s\n", *graine, pa.Nom, pb.Nom, rapport)
+	fmt.Printf("graine %d, %s contre %s\n%s\n", *graine, pa.Famille, pb.Famille, rapport)
 	return nil
 }
 

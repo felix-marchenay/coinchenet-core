@@ -5,13 +5,15 @@ import "github.com/felix-marchenay/coinchenet-core/internal/coinche"
 // Jamais désactive un seuil : aucune main ne l'atteint.
 const Jamais = 1000
 
-// Profil donne une personnalité à un bot : son goût du risque aux enchères et dans le jeu de la carte.
-// Les seuils s'expriment en points de mène (162 au total, hors belote).
+// Profil est la façon de jouer d'une famille de bots : son goût du risque aux enchères et dans le jeu
+// de la carte. Les seuils s'expriment en points de mène (162 au total, hors belote).
 type Profil struct {
 	ID          string `json:"id"`
-	Nom         string `json:"nom"`
+	Famille     string `json:"famille"`
 	Style       string `json:"style"`
 	Description string `json:"description"`
+	// Prenoms : chaque bot de la famille en porte un, tiré au hasard.
+	Prenoms []string `json:"-"`
 
 	// Optimisme : points que le bot compte recevoir de son partenaire, en attaque comme en défense.
 	Optimisme int `json:"-"`
@@ -29,40 +31,44 @@ type Profil struct {
 }
 
 var (
-	Bernard = Profil{
-		ID:          "bernard",
-		Nom:         "Bernard",
+	Kerfoule = Profil{
+		ID:          "kerfoule",
+		Famille:     "Kerfoule",
 		Style:       "prudent",
-		Description: "N'annonce que ce qu'il tient et soutient peu, mais ne laisse rien passer en défense : un contrat trop gourmand, il le coinche.",
+		Description: "Prudents de père en fils : n'annoncent que ce qu'ils tiennent et soutiennent peu, mais coinchent sans pitié un contrat trop gourmand.",
+		Prenoms:     []string{"Bernard", "Gisèle", "Yvon", "Josiane", "Gérard", "Annick", "Loïc", "Maryvonne", "Hervé", "Odile"},
 		Optimisme:   20, SoutienMin: 20, AudaceCapot: Jamais, MargeCoinche: 10, MargeSurcoinche: Jamais,
 	}
-	Martine = Profil{
-		ID:          "martine",
-		Nom:         "Martine",
-		Style:       "équilibrée",
-		Description: "Joue juste et sans excès : annonce ce que sa main vaut, coinche quand la chute est probable.",
+	McBalance = Profil{
+		ID:          "mcbalance",
+		Famille:     "McBalance",
+		Style:       "équilibré",
+		Description: "Ni trop, ni trop peu : annoncent ce que vaut leur main, coinchent quand la chute est probable.",
+		Prenoms:     []string{"Martine", "Douglas", "Fiona", "Paul", "Claire", "Ewan", "Sophie", "Malcolm", "Hélène", "Thomas"},
 		Optimisme:   30, SoutienMin: 10, AudaceCapot: Jamais, MargeCoinche: 20, MargeSurcoinche: 40,
 	}
-	Nadia = Profil{
-		ID:          "nadia",
-		Nom:         "Nadia",
-		Style:       "agressive",
-		Description: "Veut la main à chaque donne : compte sur son partenaire, surenchérit plutôt que de coincher, charge les plis sans attendre.",
+	Lashpa = Profil{
+		ID:          "lashpa",
+		Famille:     "Lashpa",
+		Style:       "agressif",
+		Description: "Veulent la main à chaque donne : comptent sur leur partenaire, surenchérissent plutôt que de coincher, chargent les plis sans attendre.",
+		Prenoms:     []string{"Nadia", "Max", "Inès", "Hugo", "Sacha", "Lina", "Tony", "Yasmine", "Rémi", "Zoé"},
 		Optimisme:   35, SoutienMin: 10, AudaceCapot: 170, MargeCoinche: 30, MargeSurcoinche: 20, ChargeRisquee: true,
 	}
-	Leo = Profil{
-		ID:          "leo",
-		Nom:         "Léo",
+	Narvaloche = Profil{
+		ID:          "narvaloche",
+		Famille:     "Narvaloche",
 		Style:       "casse-cou",
-		Description: "Ose tout : capots à l'intuition, coinches au culot, surcoinches pour le panache. Ça passe… souvent.",
+		Description: "Osent tout : capots à l'intuition, coinches au culot, surcoinches pour le panache. Ça passe… souvent.",
+		Prenoms:     []string{"Léo", "Jojo", "Lulu", "Rico", "Gaspard", "Lola", "Django", "Capucine", "Titouan", "Sacha"},
 		Optimisme:   30, SoutienMin: 10, AudaceCapot: 150, MargeCoinche: 10, MargeSurcoinche: 0, ChargeRisquee: true,
 	}
 
 	// Profils, du plus prudent au plus téméraire. Réglés au tournoi (coinchenet tournoi) pour rester
 	// de force comparable : leur personnalité change leur façon de gagner, pas leurs chances.
-	Profils = []Profil{Bernard, Martine, Nadia, Leo}
-	// Defaut joue pour les joueurs absents et les profils inconnus.
-	Defaut = Martine
+	Profils = []Profil{Kerfoule, McBalance, Lashpa, Narvaloche}
+	// Defaut joue pour les profils inconnus.
+	Defaut = McBalance
 )
 
 // Pour renvoie le profil d'identifiant id, ou Defaut.
@@ -101,7 +107,7 @@ func (Bots) Profils() []string {
 	return ids
 }
 
-func (Bots) Nom(profil string) (string, bool) {
+func (Bots) Famille(profil string) (string, []string, bool) {
 	p, ok := Trouver(profil)
-	return p.Nom, ok
+	return p.Famille, p.Prenoms, ok
 }
