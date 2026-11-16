@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"slices"
 	"strings"
 	"time"
 	"unicode"
@@ -88,6 +89,8 @@ type Table struct {
 	chats     map[uuid.UUID][]time.Time
 	// exclus : joueurs retirés par le créateur, qui ne peuvent plus revenir au salon.
 	exclus map[uuid.UUID]bool
+	// historiqueChat : derniers messages, salon compris, renvoyés dans l'instantané.
+	historiqueChat []Chat
 	// demarree reçoit le résultat du lancement d'une partie classée.
 	demarree chan error
 
@@ -406,6 +409,7 @@ func (t *Table) etatPour(joueur uuid.UUID) EtatTable {
 		Code:    t.code,
 		Options: t.options,
 		Fin:     t.fin,
+		Chat:    append([]Chat{}, t.historiqueChat...),
 	}
 	if t.createur != uuid.Nil {
 		c := t.createur
@@ -585,6 +589,7 @@ func (t *Table) chat(ctx context.Context, c Commande) error {
 	msg.Siege = s
 	msg.Pseudo = t.sieges[s].joueur.Pseudo
 	if t.statut == StatutAttente {
+		t.memoriserChat(msg)
 		t.diffuser(ctx, protocole.Message{Type: MsgChat, Data: struct {
 			Table uuid.UUID `json:"table"`
 			Chat
@@ -599,8 +604,18 @@ func (t *Table) chat(ctx context.Context, c Commande) error {
 	if err := t.persister(ctx, evt); err != nil {
 		return err
 	}
+	t.memoriserChat(msg)
 	t.diffuserEvenements(ctx, []Evenement{evt})
 	return nil
+}
+
+const tailleHistoriqueChat = 50
+
+func (t *Table) memoriserChat(c Chat) {
+	if len(t.historiqueChat) >= tailleHistoriqueChat {
+		t.historiqueChat = slices.Delete(t.historiqueChat, 0, 1)
+	}
+	t.historiqueChat = append(t.historiqueChat, c)
 }
 
 func (t *Table) autoriserChat(joueur uuid.UUID) bool {

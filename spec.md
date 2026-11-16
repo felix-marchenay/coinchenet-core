@@ -196,6 +196,7 @@ S_A = 1 si A gagne, 0 sinon
 - En partie classée, seuls des messages prédéfinis sont autorisés : `bonne_chance`, `bien_joue`, `merci`, `desole`, `oups`, `gg`.
 - Chaque joueur peut envoyer au plus 5 messages par tranche de 10 secondes.
 - Une fois la partie lancée, les messages sont journalisés, ce qui permet la modération.
+- L'instantané de la table contient les 50 derniers messages, salon compris : un joueur qui recharge la page retrouve la conversation.
 
 ---
 
