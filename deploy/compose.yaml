@@ -2,10 +2,18 @@
 # coinchenet-deployer à chaque merge sur master (voir le README).
 name: coinchenet
 
+# Journaux en volume borné : ils contiennent des adresses IP (politique de confidentialité du client).
+x-journaux: &journaux
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   caddy:
     image: caddy:2.11.9-alpine
     restart: unless-stopped
+    logging: *journaux
     depends_on:
       serveur:
         condition: service_healthy
@@ -25,6 +33,7 @@ services:
   serveur:
     image: ${COINCHE_IMAGE:-ghcr.io/felix-marchenay/coinchenet-core:master}
     restart: unless-stopped
+    logging: *journaux
     # Plusieurs instances : les tables, la file et les connexions sont réparties via Redis,
     # et une instance qui s'arrête voit ses parties reprises par les autres.
     deploy:
@@ -52,6 +61,7 @@ services:
   postgres:
     image: postgres:18.7-alpine
     restart: unless-stopped
+    logging: *journaux
     environment:
       POSTGRES_USER: coinche
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -67,6 +77,7 @@ services:
   redis:
     image: redis:8.8-alpine
     restart: unless-stopped
+    logging: *journaux
     command: ["redis-server", "--appendonly", "yes", "--maxmemory-policy", "noeviction"]
     volumes:
       - redis:/data

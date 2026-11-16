@@ -41,10 +41,10 @@
 		file_server
 	}
 
-	# Toutes les autres routes sont celles de l'application.
+	# Pages statiques (/cgu → cgu.html), sinon les routes de l'application.
 	handle {
 		header Cache-Control "no-cache"
-		try_files {path} /index.html
+		try_files {path} {path}.html /index.html
 		file_server
 	}
 
