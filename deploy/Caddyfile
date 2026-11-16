@@ -1,4 +1,6 @@
-# Certificat HTTPS automatique (Let's Encrypt) et répartition entre les instances.
+# Certificats HTTPS automatiques (Let's Encrypt) pour l'API et le client web.
+
+# API : répartition entre les instances.
 {$COINCHE_DOMAINE} {
 	encode zstd gzip
 
@@ -13,6 +15,38 @@
 		lb_try_duration 5s
 		fail_duration 30s
 		header_up X-Forwarded-For {remote_host}
+	}
+
+	log {
+		output stdout
+		format json
+	}
+}
+
+# Client web : la version publiée par coinchenet-deployer dans web/courant.
+{$COINCHE_DOMAINE_WEB} {
+	root * /srv/web/courant
+	encode zstd gzip
+
+	header {
+		X-Content-Type-Options nosniff
+		X-Frame-Options DENY
+		Referrer-Policy strict-origin-when-cross-origin
+		-Server
+	}
+
+	# Les fichiers de build portent une empreinte : cache long, mais pas sur une 404.
+	handle /assets/* {
+		@present file
+		header @present Cache-Control "public, max-age=31536000, immutable"
+		file_server
+	}
+
+	# Toutes les autres routes sont celles de l'application.
+	handle {
+		header Cache-Control "no-cache"
+		try_files {path} /index.html
+		file_server
 	}
 
 	log {

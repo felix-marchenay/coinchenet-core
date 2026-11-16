@@ -1,5 +1,5 @@
-# Déploiement de production sur un serveur Docker :
-#   cp .env.exemple .env && vi .env && docker compose up -d
+# Production : installée dans /opt/coinchenet par preparer-serveur.sh, puis mise à jour par
+# coinchenet-deployer à chaque merge sur master (voir le README).
 name: coinchenet
 
 services:
@@ -11,12 +11,14 @@ services:
         condition: service_healthy
     environment:
       COINCHE_DOMAINE: ${COINCHE_DOMAINE:?COINCHE_DOMAINE est obligatoire}
+      COINCHE_DOMAINE_WEB: ${COINCHE_DOMAINE_WEB:?COINCHE_DOMAINE_WEB est obligatoire}
     ports:
       - "80:80"
       - "443:443"
       - "443:443/udp"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./web:/srv/web:ro
       - caddy-donnees:/data
       - caddy-config:/config
 
@@ -37,7 +39,7 @@ services:
       COINCHE_POSTGRES_URL: postgres://coinche:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD est obligatoire}@postgres:5432/coinche?sslmode=disable
       COINCHE_REDIS_URL: redis://redis:6379/0
       COINCHE_URL_PUBLIQUE: https://${COINCHE_DOMAINE}
-      COINCHE_URL_FRONT: ${COINCHE_URL_FRONT:-https://${COINCHE_DOMAINE}}
+      COINCHE_URL_FRONT: ${COINCHE_URL_FRONT:-https://${COINCHE_DOMAINE_WEB}}
       COINCHE_ORIGINES: ${COINCHE_ORIGINES:-}
       COINCHE_COOKIE_DOMAINE: ${COINCHE_COOKIE_DOMAINE:-}
       COINCHE_GOOGLE_CLIENT_ID: ${COINCHE_GOOGLE_CLIENT_ID:-}
