@@ -17,7 +17,7 @@
 - **ELO individuel** et classement public.
 - Connexion par **OAuth** (Google, Discord). Une connexion par simple pseudo existe pour le développement.
 - Historique complet des parties par **event sourcing**, ce qui permet de les rejouer.
-- Chat de table : texte libre en table privée, messages prédéfinis en partie classée.
+- Chat de table : texte libre et messages rapides, dans toutes les parties.
 - API REST et WebSocket documentées (le front est un autre projet).
 - Fonctionnement sur plusieurs instances, avec reprise des parties d'une instance arrêtée.
 
@@ -166,7 +166,7 @@ S_A = 1 si A gagne, 0 sinon
 - **[Décidé]** Faute d'adversaires, des bots complètent la table du joueur qui attend depuis le plus longtemps : un bot toutes les 5 s d'attente (`COINCHE_ATTENTE_PAR_BOT`), jusqu'à trois (D19).
   - Les tables entre 4 humains passent d'abord.
   - Les autres joueurs en file rejoignent cette table quel que soit leur ELO. Un duo reste ensemble ; sinon le plus fort fait équipe avec un bot.
-  - Les bots acceptent d'office. La partie est de type `avec_bots` : elle ne compte pas pour l'ELO, le chat reste prédéfini et, comme en table privée, un bot reprend le siège d'un joueur qui abandonne.
+  - Les bots acceptent d'office. La partie est de type `avec_bots` : elle ne compte pas pour l'ELO et, comme en table privée, un bot reprend le siège d'un joueur qui abandonne.
 - Quand une table est trouvée, chaque joueur doit accepter dans les 15 s.
   - Ceux qui refusent ou ne répondent pas sortent de la file, avec leur partenaire de duo.
   - Les autres reviennent en file avec leur ancienneté.
@@ -196,8 +196,8 @@ S_A = 1 si A gagne, 0 sinon
 
 ### 4.4 Chat
 
-- En table privée, le texte est libre : 500 caractères maximum, sans caractères de contrôle.
-- En partie classée, seuls des messages prédéfinis sont autorisés : `bonne_chance`, `bien_joue`, `merci`, `desole`, `oups`, `gg`.
+- Le texte est libre dans toutes les parties, classées comprises : 500 caractères maximum, sans caractères de contrôle.
+- Des messages rapides prédéfinis sont aussi proposés : `bonne_chance`, `bien_joue`, `merci`, `desole`, `oups`, `gg`.
 - Chaque joueur peut envoyer au plus 5 messages par tranche de 10 secondes.
 - Une fois la partie lancée, les messages sont journalisés, ce qui permet la modération.
 
@@ -326,7 +326,6 @@ En résumé :
   - le serveur est la seule source de vérité et revalide chaque commande ;
   - un joueur ne reçoit jamais la main d'un autre ;
   - le replay n'est possible qu'une fois la partie finie ;
-  - le chat est restreint en partie classée ;
   - en partie classée, la distribution est aléatoire pour qu'on ne puisse pas déduire les mains (D1).
 - **Sécurité** :
   - le cookie de session est `HttpOnly`, `Secure` et `SameSite=Lax` ;
@@ -371,7 +370,7 @@ Tous les écarts relevés sur l'ancien moteur sont corrigés :
 | 3. Acteur de table et événements | Délais, journal Postgres, reconstruction | ✅ |
 | 4. Comptes et API REST | OAuth Google et Discord, sessions, profils, classement, historique | ✅ |
 | 5. WebSocket et tables privées | Passerelle, projections par joueur, salon, bots, chat | ✅ |
-| 6. File classée et ELO | Solo et duo, acceptation, ELO, classement, chat prédéfini | ✅ |
+| 6. File classée et ELO | Solo et duo, acceptation, ELO, classement | ✅ |
 | 7. Robustesse | Reconnexion, abandon, plusieurs instances, reprise, métriques, déploiement | ✅ |
 
 Pistes pour la suite :
@@ -407,3 +406,4 @@ Pistes pour la suite :
 | D17 | Déploiement continu | À chaque merge sur `master`, la CI se connecte en SSH avec une clé restreinte à `coinchenet-deployer` (une clé par dépôt, liée à sa cible `api` ou `web`). Pour l'API, le serveur n'accepte qu'un commit de `master` et lit la configuration à ce commit. Les réglages `COINCHE_*` viennent des secrets et variables GitHub. API et client sur deux domaines | Le serveur n'a besoin d'aucun accès au dépôt ni au registre. Une clé de CI divulguée ne donne pas de shell : elle permet seulement de redéployer un commit de `master` (API) ou de publier un build du client (web). Le client et l'API se déploient indépendamment. |
 | D18 | Niveau et personnalité des bots | Quatre familles de bots (Kerfoule prudents, McBalance équilibrés, Lashpa agressifs, Narvaloche casse-cou) : la famille fixe la façon de jouer, réglée par six paramètres d'enchère et de jeu, et chaque bot porte un prénom tiré parmi les dix de sa famille. Le créateur d'une table privée choisit la famille de chaque bot ou la laisse au hasard ; un joueur absent est remplacé par une famille tirée au hasard | Des adversaires reconnaissables rendent les parties contre bots plus vivantes. Le tournoi entre profils (`coinchenet tournoi`) les garde de force comparable. Des niveaux de force calés sur l'ELO restent possibles avec les mêmes outils. |
 | D19 | Bots dans la file | Faute d'adversaires, un bot rejoint la table toutes les 5 s, jusqu'à la compléter ; la partie n'est pas classée | On peut toujours jouer en ligne, même seul, sans attendre plus de 15 s. Les bots ne sont pas calibrés face aux humains : les compter fausserait le classement. |
+| D20 | Chat en partie classée | Texte libre, comme en table privée | Les joueurs veulent pouvoir discuter. Le risque qu'un joueur annonce son jeu à son partenaire est accepté : les messages sont journalisés pour la modération, et un duo peut de toute façon se parler hors du site. |

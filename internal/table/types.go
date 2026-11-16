@@ -81,7 +81,7 @@ func (o Options) Delai() time.Duration {
 	return time.Duration(o.DelaiAction) * time.Second
 }
 
-// MessagesPredefinis sont les seuls messages de chat autorisés en partie classée.
+// MessagesPredefinis sont les messages rapides du chat, que le client traduit.
 var MessagesPredefinis = []string{"bonne_chance", "bien_joue", "merci", "desole", "oups", "gg"}
 
 type SiegeInitial struct {

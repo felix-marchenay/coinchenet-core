@@ -597,7 +597,7 @@ func (t *Table) chat(ctx context.Context, c Commande) error {
 	if err != nil {
 		return err
 	}
-	msg, err := validerChat(t.typ, d)
+	msg, err := validerChat(d)
 	if err != nil {
 		return err
 	}
@@ -642,7 +642,7 @@ func (t *Table) autoriserChat(joueur uuid.UUID) bool {
 	return true
 }
 
-func validerChat(typ Type, d DonneesChat) (Chat, error) {
+func validerChat(d DonneesChat) (Chat, error) {
 	if d.Message != "" {
 		for _, m := range MessagesPredefinis {
 			if m == d.Message {
@@ -650,9 +650,6 @@ func validerChat(typ Type, d DonneesChat) (Chat, error) {
 			}
 		}
 		return Chat{}, ErrChatInvalide
-	}
-	if typ != Privee {
-		return Chat{}, erreur("chat_restreint", "seuls les messages prédéfinis sont autorisés dans les parties de la file")
 	}
 	texte := nettoyerTexte(d.Texte)
 	if texte == "" || len([]rune(texte)) > 500 {

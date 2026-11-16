@@ -118,7 +118,7 @@ File classée et tables privées s'excluent :
 | `partie.jouer` | `{"carte": "V-coeur"}` | Joue une carte. |
 | `partie.present` | – | Reprend la main après avoir été déclaré absent. |
 | `partie.abandonner` | – | Partie classée : forfait immédiat. Partie privée : un bot reprend le siège. |
-| `partie.chat` | `{"texte": "…"}` (privée, 500 caractères maximum) ou `{"message": "bien_joue"}` | Dans les parties de la file (classées ou avec bots), seuls les messages prédéfinis sont acceptés : `bonne_chance`, `bien_joue`, `merci`, `desole`, `oups`, `gg`. |
+| `partie.chat` | `{"texte": "…"}` (500 caractères maximum) ou `{"message": "bien_joue"}` | Messages rapides : `bonne_chance`, `bien_joue`, `merci`, `desole`, `oups`, `gg`. |
 
 ### Messages du serveur
 
@@ -167,7 +167,7 @@ Les messages de partie portent `table` (uuid) et `seq`, le numéro de l'événem
 | `deja_a_une_table` | Le joueur est déjà à une autre table. |
 | `deja_en_file` | Le joueur est déjà dans la file. |
 | `partenaire_occupe` | Le partenaire invité est déjà dans la file. |
-| `chat_invalide`, `chat_restreint` | Message de chat refusé. |
+| `chat_invalide` | Message de chat refusé. |
 | `trop_de_requetes` | Débit dépassé. |
 | `requete_invalide` | Message mal formé. |
 | `indisponible` | Service momentanément indisponible. |
