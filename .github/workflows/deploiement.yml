@@ -19,19 +19,27 @@ jobs:
       cancel-in-progress: false
     steps:
       # La clé ne permet que de lancer coinchenet-deployer api avec le commit (deploy/deployer.sh).
-      # Les secrets et variables COINCHE_* du dépôt partent sur l'entrée standard, vers le .env.
+      # Les variables COINCHE_* du dépôt, puis les secrets listés ici, partent sur l'entrée standard
+      # vers le .env (un secret l'emporte sur une variable de même nom). Les secrets sont nommés un
+      # à un : le job ne reçoit que ceux qu'il transmet.
       - name: Déploiement sur le serveur
         env:
           CLE: ${{ secrets.DEPLOY_SSH_KEY }}
           HOTE: ${{ vars.DEPLOY_HOST }}
           HOTES_CONNUS: ${{ vars.DEPLOY_KNOWN_HOSTS }}
-          SECRETS: ${{ toJSON(secrets) }}
           VARIABLES: ${{ toJSON(vars) }}
+          COINCHE_GOOGLE_CLIENT_ID: ${{ secrets.COINCHE_GOOGLE_CLIENT_ID }}
+          COINCHE_GOOGLE_CLIENT_SECRET: ${{ secrets.COINCHE_GOOGLE_CLIENT_SECRET }}
+          COINCHE_DISCORD_CLIENT_ID: ${{ secrets.COINCHE_DISCORD_CLIENT_ID }}
+          COINCHE_DISCORD_CLIENT_SECRET: ${{ secrets.COINCHE_DISCORD_CLIENT_SECRET }}
         run: |
           install -d -m 700 ~/.ssh
           printf '%s\n' "$CLE" > ~/.ssh/deploiement
           chmod 600 ~/.ssh/deploiement
           printf '%s\n' "$HOTES_CONNUS" > ~/.ssh/known_hosts
-          jq -rn '(env.VARIABLES | fromjson) + (env.SECRETS | fromjson)
-            | to_entries[] | select(.key | startswith("COINCHE_")) | "\(.key)=\(.value)"' |
-            ssh -i ~/.ssh/deploiement -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "deploiement@$HOTE" "$GITHUB_SHA"
+          {
+            jq -rn 'env.VARIABLES | fromjson | to_entries[] | select(.key | startswith("COINCHE_")) | "\(.key)=\(.value)"'
+            for nom in COINCHE_GOOGLE_CLIENT_ID COINCHE_GOOGLE_CLIENT_SECRET COINCHE_DISCORD_CLIENT_ID COINCHE_DISCORD_CLIENT_SECRET; do
+              if [ -n "${!nom}" ]; then printf '%s=%s\n' "$nom" "${!nom}"; fi
+            done
+          } | ssh -i ~/.ssh/deploiement -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "deploiement@$HOTE" "$GITHUB_SHA"
