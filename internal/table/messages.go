@@ -46,6 +46,7 @@ type Entete struct {
 type EtatSiege struct {
 	Joueur      *Joueur    `json:"joueur,omitempty"`
 	Bot         bool       `json:"bot"`
+	Profil      string     `json:"profil,omitempty"`
 	Statut      string     `json:"statut"`
 	RetourAvant *time.Time `json:"retour_avant,omitempty"`
 }

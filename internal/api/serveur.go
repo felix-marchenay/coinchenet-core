@@ -110,6 +110,7 @@ func NouveauServeur(d Dependances) *Serveur {
 	mux.HandleFunc("GET /pret", s.pret)
 	mux.HandleFunc("GET /version", s.version)
 	mux.HandleFunc("GET /regles", s.regles)
+	mux.HandleFunc("GET /bots", s.bots)
 	d.Auth.Routes(mux)
 	mux.HandleFunc("GET /moi", s.authentifie(s.moi))
 	mux.HandleFunc("PATCH /moi", s.authentifie(s.modifierMoi))

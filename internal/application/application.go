@@ -88,7 +88,7 @@ func Demarrer(ctx context.Context, cfg config.Config, log *slog.Logger, version 
 		Archiviste: a.base,
 		Diffuseur:  diffuseur,
 		Annuaire:   annuaire,
-		Decideur:   bot.Bot{},
+		Decideur:   bot.Bots{},
 		Metriques:  metriquesTable{&metriques},
 		Logger:     log,
 	}, a.bus, verrous, redisstore.NouveauxCodes(a.redis), a.base)

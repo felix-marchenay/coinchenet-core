@@ -16,6 +16,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/felix-marchenay/coinchenet-core/internal/bot"
 	"github.com/felix-marchenay/coinchenet-core/internal/donnees"
 	"github.com/felix-marchenay/coinchenet-core/internal/matchmaking"
 	"github.com/felix-marchenay/coinchenet-core/internal/table"
@@ -295,6 +296,17 @@ func TestRoutesPubliques(t *testing.T) {
 	require.Equal(t, http.StatusOK, w.Code)
 	assert.Contains(t, w.Body.String(), `"messages_predefinis"`)
 	assert.Equal(t, "nosniff", w.Header().Get("X-Content-Type-Options"))
+
+	w = requete(t, s, http.MethodGet, "/bots", nil, "")
+	require.Equal(t, http.StatusOK, w.Code)
+	var bots struct {
+		Bots []map[string]any `json:"bots"`
+	}
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &bots))
+	require.Len(t, bots.Bots, 4)
+	assert.Equal(t, map[string]any{
+		"id": "leo", "nom": "Léo", "style": "casse-cou", "description": bot.Leo.Description,
+	}, bots.Bots[3], "seule la présentation est publique, pas les réglages")
 }
 
 func TestPret(t *testing.T) {
