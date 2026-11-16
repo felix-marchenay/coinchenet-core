@@ -1,0 +1,82 @@
+name: coinchenet
+
+services:
+  postgres:
+    image: postgres:18.7-alpine
+    environment:
+      POSTGRES_USER: coinche
+      POSTGRES_PASSWORD: coinche
+      POSTGRES_DB: coinche
+    volumes:
+      - postgres:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U coinche -d coinche"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  redis:
+    image: redis:8.8-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  serveur:
+    build: .
+    image: coinchenet:dev
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      COINCHE_POSTGRES_URL: postgres://coinche:coinche@postgres:5432/coinche?sslmode=disable
+      COINCHE_REDIS_URL: redis://redis:6379/0
+      COINCHE_URL_PUBLIQUE: http://localhost:${COINCHE_PORT:-8080}
+      COINCHE_URL_FRONT: http://localhost:${COINCHE_PORT:-8080}
+      COINCHE_COOKIE_SECURE: "false"
+      COINCHE_AUTH_DEV: "true"
+      COINCHE_LOG_FORMAT: texte
+    ports:
+      - "127.0.0.1:${COINCHE_PORT:-8080}:8080"
+
+  # Outils de développement : `make test`, `make lint`… (aucun Go requis sur la machine hôte)
+  outils:
+    image: golang:1.27.4-trixie
+    profiles: ["outils"]
+    user: "${UID:-1000}:${GID:-1000}"
+    working_dir: /app
+    volumes:
+      - .:/app
+      - ./.cache/go:/cache
+    environment:
+      HOME: /tmp
+      GOCACHE: /cache/build
+      GOMODCACHE: /cache/mod
+      GOFLAGS: -buildvcs=false
+      COINCHE_TEST_POSTGRES_URL: postgres://coinche:coinche@postgres:5432/coinche_test?sslmode=disable
+      COINCHE_TEST_REDIS_URL: redis://redis:6379/15
+
+  lint:
+    image: golangci/golangci-lint:v2.15.0
+    profiles: ["outils"]
+    user: "${UID:-1000}:${GID:-1000}"
+    working_dir: /app
+    volumes:
+      - .:/app
+      - ./.cache/go:/cache
+    environment:
+      HOME: /tmp
+      GOCACHE: /cache/build
+      GOMODCACHE: /cache/mod
+      GOLANGCI_LINT_CACHE: /cache/lint
+      GOFLAGS: -buildvcs=false
+
+volumes:
+  postgres:
+  redis:

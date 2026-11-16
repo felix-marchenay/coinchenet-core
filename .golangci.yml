@@ -1,0 +1,80 @@
+version: "2"
+
+run:
+  timeout: 5m
+  build-tags:
+    - integration
+
+linters:
+  default: standard
+  enable:
+    - bodyclose
+    - depguard
+    - errorlint
+    - gocritic
+    - gosec
+    - nilerr
+    - noctx
+    - nolintlint
+    - rowserrcheck
+    - sqlclosecheck
+    - unconvert
+    - usestdlibvars
+    - wastedassign
+  settings:
+    depguard:
+      rules:
+        # Le moteur de règles reste pur : bibliothèque standard uniquement.
+        moteur:
+          list-mode: strict
+          files:
+            - "**/internal/coinche/*.go"
+            - "!$test"
+          allow:
+            - $gostd
+        # Le domaine ne connaît ni le stockage, ni le transport.
+        domaine:
+          files:
+            - "**/internal/coinche/**"
+            - "**/internal/bot/**"
+            - "**/internal/classement/**"
+            - "**/internal/table/**"
+            - "**/internal/matchmaking/**"
+            - "**/internal/simulation/**"
+          deny:
+            - pkg: github.com/felix-marchenay/coinchenet-core/internal/stockage
+              desc: le domaine ne dépend pas du stockage
+            - pkg: github.com/felix-marchenay/coinchenet-core/internal/api
+              desc: le domaine ne dépend pas de l'API
+            - pkg: github.com/felix-marchenay/coinchenet-core/internal/application
+              desc: le domaine ne dépend pas de l'assemblage
+            - pkg: github.com/jackc/pgx
+              desc: le domaine ne dépend pas de Postgres
+            - pkg: github.com/redis/go-redis
+              desc: le domaine ne dépend pas de Redis
+    gocritic:
+      disabled-checks:
+        - ifElseChain
+  exclusions:
+    presets:
+      - std-error-handling
+    rules:
+      - path: _test\.go
+        linters:
+          - gosec
+          - noctx
+          - bodyclose
+      # Hasard reproductible réservé aux tests et aux simulations.
+      - path: internal/coinche/hasard\.go
+        linters:
+          - gosec
+        text: G404
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  settings:
+    goimports:
+      local-prefixes:
+        - github.com/felix-marchenay/coinchenet-core

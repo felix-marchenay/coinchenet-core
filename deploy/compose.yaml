@@ -1,0 +1,81 @@
+# Déploiement de production sur un serveur Docker :
+#   cp .env.exemple .env && vi .env && docker compose up -d
+name: coinchenet
+
+services:
+  caddy:
+    image: caddy:2.11.9-alpine
+    restart: unless-stopped
+    depends_on:
+      serveur:
+        condition: service_healthy
+    environment:
+      COINCHE_DOMAINE: ${COINCHE_DOMAINE:?COINCHE_DOMAINE est obligatoire}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-donnees:/data
+      - caddy-config:/config
+
+  serveur:
+    image: ${COINCHE_IMAGE:-ghcr.io/felix-marchenay/coinchenet-core:master}
+    restart: unless-stopped
+    # Plusieurs instances : les tables, la file et les connexions sont réparties via Redis,
+    # et une instance qui s'arrête voit ses parties reprises par les autres.
+    deploy:
+      replicas: ${COINCHE_INSTANCES:-2}
+    stop_grace_period: 30s
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      COINCHE_POSTGRES_URL: postgres://coinche:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD est obligatoire}@postgres:5432/coinche?sslmode=disable
+      COINCHE_REDIS_URL: redis://redis:6379/0
+      COINCHE_URL_PUBLIQUE: https://${COINCHE_DOMAINE}
+      COINCHE_URL_FRONT: ${COINCHE_URL_FRONT:-https://${COINCHE_DOMAINE}}
+      COINCHE_ORIGINES: ${COINCHE_ORIGINES:-}
+      COINCHE_COOKIE_DOMAINE: ${COINCHE_COOKIE_DOMAINE:-}
+      COINCHE_GOOGLE_CLIENT_ID: ${COINCHE_GOOGLE_CLIENT_ID:-}
+      COINCHE_GOOGLE_CLIENT_SECRET: ${COINCHE_GOOGLE_CLIENT_SECRET:-}
+      COINCHE_DISCORD_CLIENT_ID: ${COINCHE_DISCORD_CLIENT_ID:-}
+      COINCHE_DISCORD_CLIENT_SECRET: ${COINCHE_DISCORD_CLIENT_SECRET:-}
+      COINCHE_LOG_NIVEAU: ${COINCHE_LOG_NIVEAU:-info}
+      COINCHE_ARRET_GRACIEUX: 25s
+
+  postgres:
+    image: postgres:18.7-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: coinche
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: coinche
+    volumes:
+      - postgres:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U coinche -d coinche"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  redis:
+    image: redis:8.8-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory-policy", "noeviction"]
+    volumes:
+      - redis:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  caddy-donnees:
+  caddy-config:
+  postgres:
+  redis:
