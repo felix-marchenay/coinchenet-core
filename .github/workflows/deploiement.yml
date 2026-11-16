@@ -1,0 +1,37 @@
+name: Déploiement
+
+# Appelé par la CI après chaque merge sur master, ou lancé à la main (Actions → Déploiement →
+# Run workflow) pour appliquer un changement de réglage sans nouveau commit.
+on:
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploiement:
+    name: Déploiement
+    if: github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    concurrency:
+      group: deploiement
+      cancel-in-progress: false
+    steps:
+      # La clé ne permet que de lancer coinchenet-deployer api avec le commit (deploy/deployer.sh).
+      # Les secrets et variables COINCHE_* du dépôt partent sur l'entrée standard, vers le .env.
+      - name: Déploiement sur le serveur
+        env:
+          CLE: ${{ secrets.DEPLOY_SSH_KEY }}
+          HOTE: ${{ vars.DEPLOY_HOST }}
+          HOTES_CONNUS: ${{ vars.DEPLOY_KNOWN_HOSTS }}
+          SECRETS: ${{ toJSON(secrets) }}
+          VARIABLES: ${{ toJSON(vars) }}
+        run: |
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$CLE" > ~/.ssh/deploiement
+          chmod 600 ~/.ssh/deploiement
+          printf '%s\n' "$HOTES_CONNUS" > ~/.ssh/known_hosts
+          jq -rn '(env.VARIABLES | fromjson) + (env.SECRETS | fromjson)
+            | to_entries[] | select(.key | startswith("COINCHE_")) | "\(.key)=\(.value)"' |
+            ssh -i ~/.ssh/deploiement -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes "deploiement@$HOTE" "$GITHUB_SHA"
