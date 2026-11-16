@@ -1,63 +1,89 @@
 package coinche
 
+type CarteJouee struct {
+	Siege Siege `json:"siege"`
+	Carte Carte `json:"carte"`
+}
+
 type Pli struct {
-	Cartes        map[*Joueur]Carte
-	PremierJoueur *Joueur
+	Entame  Siege        `json:"entame"`
+	Cartes  []CarteJouee `json:"cartes"`
+	Gagnant Siege        `json:"gagnant"`
 }
 
-func (p Pli) SCartes() (cc CarteCollection) {
-
-	for _, c := range p.Cartes {
-		cc.Cartes = append(cc.Cartes, c)
-	}
-
-	return
+func (p Pli) Complet() bool {
+	return len(p.Cartes) == NbSieges
 }
 
-func (p *Pli) Ajouter(j *Joueur, c *Carte) {
-	if p.PremierJoueur == nil {
-		p.PremierJoueur = j
-	}
-
-	if _, existe := p.Cartes[j]; existe {
-		return
-	}
-
-	if p.Cartes == nil {
-		p.Cartes = make(map[*Joueur]Carte)
-	}
-
-	p.Cartes[j] = *c
-}
-
-func (p Pli) Remporte(a Atout) (g *Joueur) {
+func (p Pli) CouleurDemandee() (Couleur, bool) {
 	if len(p.Cartes) == 0 {
-		return nil
+		return 0, false
+	}
+	return p.Cartes[0].Carte.Couleur, true
+}
+
+// Maitre renvoie la carte qui remporte le pli en l'état.
+func (p Pli) Maitre(a Atout) (CarteJouee, bool) {
+	if len(p.Cartes) == 0 {
+		return CarteJouee{}, false
 	}
 
-	var b *Carte
-
-	couleurDemandee := p.Cartes[p.PremierJoueur].Couleur
-
-	for j, c := range p.Cartes {
-		if b == nil || c.Bat(b, a, couleurDemandee) {
-			b = &c
-			g = j
+	demandee := p.Cartes[0].Carte.Couleur
+	meilleure := p.Cartes[0]
+	for _, cj := range p.Cartes[1:] {
+		if cj.Carte.Bat(&meilleure.Carte, a, demandee) {
+			meilleure = cj
 		}
 	}
+	return meilleure, true
+}
 
-	return g
+func (p Pli) Remporte(a Atout) Siege {
+	m, _ := p.Maitre(a)
+	return m.Siege
 }
 
 func (p Pli) Score(a Atout) int {
-	if len(p.Cartes) == 0 {
-		return 0
-	}
-
 	s := 0
-	for _, c := range p.Cartes {
-		s += c.Points(a)
+	for _, cj := range p.Cartes {
+		s += cj.Carte.Points(a)
 	}
-
 	return s
+}
+
+func (p Pli) SCartes() (cc CarteCollection) {
+	for _, cj := range p.Cartes {
+		cc.Cartes = append(cc.Cartes, cj.Carte)
+	}
+	return
+}
+
+// plusHautAtout renvoie le plus fort atout posé dans le pli.
+func (p Pli) plusHautAtout(a Atout) (Carte, bool) {
+	var meilleure Carte
+	trouve := false
+	for _, cj := range p.Cartes {
+		if !a.EstCouleur() || cj.Carte.Couleur != Couleur(a) {
+			continue
+		}
+		if !trouve || cj.Carte.Rang(a) > meilleure.Rang(a) {
+			meilleure, trouve = cj.Carte, true
+		}
+	}
+	return meilleure, trouve
+}
+
+// plusHauteDeCouleur renvoie la plus forte carte posée dans une couleur donnée.
+func (p Pli) plusHauteDeCouleur(c Couleur, a Atout) (Carte, bool) {
+	var meilleure Carte
+	trouve := false
+	for _, cj := range p.Cartes {
+		if cj.Carte.Couleur != c {
+			continue
+		}
+		if !trouve || cj.Carte.Rang(a) > meilleure.Rang(a) {
+			meilleure, trouve = cj.Carte, true
+		}
+	}
+	return meilleure, trouve
 }
