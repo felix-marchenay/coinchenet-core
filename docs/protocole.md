@@ -49,6 +49,7 @@ Les requêtes REST qui modifient des données exigent `Content-Type: application
 | GET | `/joueurs/{id}/parties?avant=<date>&limite=20` | – | Historique, du plus récent au plus ancien. Si la page est pleine, `suivant` donne la valeur à passer dans `avant` pour la page suivante. |
 | GET | `/joueurs/{id}/elo?limite=100` | – | Évolution de l'ELO, partie par partie : `{"points": [{partie, date, elo, delta}]}`. |
 | GET | `/classement?page=1&taille=50` | – | Classement public. Les joueurs provisoires (moins de 10 parties classées) n'y figurent pas. |
+| GET | `/parties?type=classee,avec_bots&avant=<date>&limite=20` | – | Parties terminées, de la plus récente à la plus ancienne, tous types par défaut (`classee`, `privee`, `avec_bots`). Chaque partie a les champs du résumé, plus `menes` : les scores cumulés `[A, B]` après chaque mène. Pagination comme l'historique d'un joueur. |
 | GET | `/parties/{id}` | – | Résumé d'une partie : participants, scores, ELO avant et après. |
 | GET | `/parties/{id}/evenements` | selon le cas | Replay complet, mains comprises, seulement pour une partie terminée. Une partie privée n'est visible que de ses joueurs (403 sinon). |
 | POST | `/tables` | oui | Crée une table privée. Corps : `{"regles": {...}, "delai_action": 30}` ; les champs absents prennent les valeurs par défaut. Réponse 201 : `{"table": "<uuid>", "code": "K7M2QX", "options": {...}}`. Renvoie 409 `deja_a_une_table` si l'on est déjà à une table. |

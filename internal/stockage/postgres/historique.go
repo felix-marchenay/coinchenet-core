@@ -55,11 +55,12 @@ func (b *Base) Classement(ctx context.Context, page, taille int) (donnees.PageCl
 
 const colonnesPartie = "p.id, p.type, p.statut, p.cause, p.equipe_gagnante, p.score_a, p.score_b, p.options, p.debut, p.fin"
 
-func lirePartie(l pgx.Row) (donnees.ResumePartie, error) {
+// lirePartie lit les colonnes de colonnesPartie, puis celles qui suivent dans autres.
+func lirePartie(l pgx.Row, autres ...any) (donnees.ResumePartie, error) {
 	var r donnees.ResumePartie
 	var scoreA, scoreB *int
 	var options []byte
-	err := l.Scan(&r.ID, &r.Type, &r.Statut, &r.Cause, &r.EquipeGagnante, &scoreA, &scoreB, &options, &r.Debut, &r.Fin)
+	err := l.Scan(append([]any{&r.ID, &r.Type, &r.Statut, &r.Cause, &r.EquipeGagnante, &scoreA, &scoreB, &options, &r.Debut, &r.Fin}, autres...)...)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return r, donnees.ErrIntrouvable
 	}
@@ -121,6 +122,48 @@ func (b *Base) PartiesDuJoueur(ctx context.Context, joueur uuid.UUID, avant *tim
 	}
 	if res == nil {
 		res = []donnees.ResumePartie{}
+	}
+	return res, nil
+}
+
+func (b *Base) PartiesJouees(ctx context.Context, types []string, avant *time.Time, limite int) ([]donnees.PartieJouee, error) {
+	if limite < 1 || limite > 100 {
+		limite = 20
+	}
+	lignes, err := b.pool.Query(ctx, "select "+colonnesPartie+`,
+			coalesce((select jsonb_agg(e.donnees->'scores' order by e.sequence)
+				from evenements e where e.partie_id = p.id and e.type = 'mene'), '[]')
+		from parties p
+		where p.statut = 'terminee'
+			and (coalesce(cardinality($1::text[]), 0) = 0 or p.type = any($1))
+			and ($2::timestamptz is null or p.debut < $2)
+		order by p.debut desc, p.id desc
+		limit $3`, types, avant, limite)
+	if err != nil {
+		return nil, fmt.Errorf("liste des parties jouées : %w", err)
+	}
+	res, err := pgx.CollectRows(lignes, func(l pgx.CollectableRow) (donnees.PartieJouee, error) {
+		var pj donnees.PartieJouee
+		var menes []byte
+		r, err := lirePartie(l, &menes)
+		if err != nil {
+			return pj, err
+		}
+		pj.ResumePartie = r
+		return pj, json.Unmarshal(menes, &pj.Menes)
+	})
+	if err != nil {
+		return nil, fmt.Errorf("liste des parties jouées : %w", err)
+	}
+	parties := make([]*donnees.ResumePartie, len(res))
+	for i := range res {
+		parties[i] = &res[i].ResumePartie
+	}
+	if err := b.completerParticipants(ctx, parties); err != nil {
+		return nil, err
+	}
+	if res == nil {
+		res = []donnees.PartieJouee{}
 	}
 	return res, nil
 }
