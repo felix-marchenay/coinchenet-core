@@ -6,7 +6,8 @@
 # et ne transmet que le commit à déployer. À la main : coinchenet-deployer <api|web> <commit>.
 #
 #   api : image ghcr.io/…:sha-<commit> ; compose.yaml et Caddyfile lus dans le dépôt à ce commit,
-#         qui doit être sur master. Retour à la version précédente si elle ne démarre pas.
+#         qui doit être sur master ; réglages COINCHE_* reçus de la CI sur l'entrée standard et
+#         écrits dans .env. Retour à la version précédente si elle ne démarre pas.
 #   web : archive tar.gz du build du client sur l'entrée standard, publiée dans web/courant.
 set -eu
 
@@ -32,6 +33,16 @@ exec 9>.deploiement.verrou
 flock 9
 
 deployer_api() {
+	tmp=$(mktemp -d)
+	trap 'rm -rf "$tmp"' EXIT
+	# Réglages COINCHE_* (secrets et variables GitHub) envoyés par la CI, une ligne CLE=valeur chacun.
+	if [ -n "${SSH_ORIGINAL_COMMAND:-}" ]; then
+		cat >"$tmp/reglages"
+	else
+		: >"$tmp/reglages"
+	fi
+	valider_reglages "$tmp/reglages"
+
 	comparaison=$(curl -fsS "https://api.github.com/repos/$depot/compare/$commit...master") ||
 		erreur "commit $commit introuvable dans $depot"
 	statut=$(printf '%s' "$comparaison" | python3 -c 'import json, sys; print(json.load(sys.stdin)["status"])')
@@ -41,35 +52,59 @@ deployer_api() {
 	esac
 
 	image=ghcr.io/$depot:sha-$commit
-	tmp=$(mktemp -d)
-	trap 'rm -rf "$tmp"' EXIT
 	for f in compose.yaml Caddyfile; do
 		curl -fsS -o "$tmp/$f" "https://raw.githubusercontent.com/$depot/$commit/deploy/$f"
 	done
 	docker pull -q "$image" >/dev/null
 
-	cp compose.yaml "$tmp/compose.yaml.precedent"
-	cp Caddyfile "$tmp/Caddyfile.precedent"
-	precedente=$(sed -n 's/^COINCHE_IMAGE=//p' .env)
+	# cp réécrit les fichiers en place : Caddy monte son Caddyfile seul et ne verrait pas un nouvel inode.
+	for f in compose.yaml Caddyfile .env; do
+		cp "$f" "$tmp/$f.precedent"
+	done
+	cp "$tmp/compose.yaml" compose.yaml
+	cp "$tmp/Caddyfile" Caddyfile
+	reglage COINCHE_IMAGE "$image"
+	while IFS= read -r ligne || [ -n "$ligne" ]; do
+		reglage "${ligne%%=*}" "${ligne#*=}"
+		echo "réglage : ${ligne%%=*}"
+	done <"$tmp/reglages"
 
-	installer "$tmp/compose.yaml" "$tmp/Caddyfile" "$image"
 	if ! demarrer; then
-		echo "coinchenet-deployer : échec du démarrage, retour à ${precedente:-image par défaut}" >&2
-		installer "$tmp/compose.yaml.precedent" "$tmp/Caddyfile.precedent" "$precedente"
+		echo "coinchenet-deployer : échec du démarrage, retour à la version précédente" >&2
+		for f in compose.yaml Caddyfile .env; do
+			cp "$tmp/$f.precedent" "$f"
+		done
 		demarrer || true
 		exit 1
 	fi
 	docker image prune -af --filter until=168h >/dev/null
 }
 
-# cp réécrit les fichiers en place : Caddy monte son Caddyfile seul et ne verrait pas un nouvel inode.
-installer() {
-	cp "$1" compose.yaml
-	cp "$2" Caddyfile
-	if grep -q '^COINCHE_IMAGE=' .env; then
-		sed -i "s|^COINCHE_IMAGE=.*|COINCHE_IMAGE=$3|" .env
+# Les noms et valeurs sont restreints : ils finissent dans .env, interprété par Docker Compose.
+# Une erreur ne cite jamais la ligne, qui peut contenir un secret.
+valider_reglages() {
+	n=0
+	while IFS= read -r ligne || [ -n "$ligne" ]; do
+		n=$((n + 1))
+		case $ligne in
+		COINCHE_IMAGE=*) erreur "réglage $n : COINCHE_IMAGE est fixé par le déploiement" ;;
+		COINCHE_*=*) ;;
+		*) erreur "réglage $n : nom attendu COINCHE_…=valeur" ;;
+		esac
+		case ${ligne%%=*} in
+		*[!A-Z0-9_]*) erreur "réglage $n : nom invalide" ;;
+		esac
+		case ${ligne#*=} in
+		*[!A-Za-z0-9._:/@,+=~-]*) erreur "réglage ${ligne%%=*} : valeur refusée (lettres, chiffres et ._:/@,+=~- seulement)" ;;
+		esac
+	done <"$1"
+}
+
+reglage() {
+	if grep -q "^$1=" .env; then
+		sed -i "s|^$1=.*|$1=$2|" .env
 	else
-		echo "COINCHE_IMAGE=$3" >>.env
+		echo "$1=$2" >>.env
 	fi
 }
 

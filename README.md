@@ -137,7 +137,19 @@ Chaque merge sur `master` part en production :
 - **API** : la CI publie `ghcr.io/felix-marchenay/coinchenet-core:sha-<commit>`, puis lance sur le serveur `coinchenet-deployer api <commit>` ([`deploy/deployer.sh`](deploy/deployer.sh)). Le script vérifie que le commit est sur `master` et y lit `compose.yaml` et `Caddyfile`. Il change ensuite d'image et attend que les instances soient saines. Si elles ne démarrent pas, il revient à la version précédente.
 - **Client web** : la CI de coincheweb construit le client et envoie l'archive à `coinchenet-deployer web <commit>`. Le script la publie d'un bloc et garde les 5 dernières versions.
 
-La CI se connecte en SSH avec l'utilisateur `deploiement`. Chacune de ses clés est restreinte à une seule commande (`restrict,command=…`), qui ne peut que déployer.
+La CI se connecte en SSH avec l'utilisateur `deploiement`. Chacune de ses clés est restreinte à une seule commande (`restrict,command=…`), qui ne peut que déployer. Une modification de `deploy/deployer.sh` s'installe en relançant `preparer-serveur.sh`.
+
+### Réglages depuis GitHub
+
+Chaque secret ou variable GitHub du dépôt dont le nom commence par `COINCHE_` est recopié dans le `.env` du serveur à chaque déploiement. Par exemple `COINCHE_GOOGLE_CLIENT_SECRET` en secret, `COINCHE_LOG_NIVEAU` en variable. Un secret l'emporte sur une variable de même nom.
+
+Pour appliquer un changement sans nouveau commit : *Actions → Déploiement → Run workflow*, ou `gh workflow run deploiement.yml`.
+
+- Les valeurs sont limitées aux lettres, chiffres et `._:/@,+=~-`.
+- `COINCHE_IMAGE` est fixé par le déploiement.
+- `POSTGRES_PASSWORD` reste sur le serveur, puisqu'il est fixé à la création de la base.
+- Supprimer un réglage de GitHub ne l'efface pas du serveur.
+- Si le serveur ne démarre pas avec les nouveaux réglages, l'ancien `.env` est rétabli.
 
 Les parties en cours sont reprises depuis le journal par les nouvelles instances, et les joueurs sont reconnectés automatiquement.
 
