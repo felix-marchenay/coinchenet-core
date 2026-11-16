@@ -228,7 +228,7 @@ S_A = 1 si A gagne, 0 sinon
 | Authentification | OAuth 2.0 + PKCE (Google en OIDC, Discord), sessions opaques en Redis |
 | Historique | Event sourcing des parties |
 | Observabilité | Journaux `log/slog` en JSON, métriques Prometheus, pprof sur un port d'administration |
-| Livraison | Image distroless non root, Docker Compose + Caddy, CI GitHub Actions publiant sur GHCR |
+| Livraison | Image distroless non root, Docker Compose + Caddy, CI GitHub Actions publiant sur GHCR et déployant chaque merge sur `master` |
 
 ### 6.2 Organisation du code
 
@@ -400,3 +400,4 @@ Pistes pour la suite :
 | D14 | Pseudo | Proposé à partir du nom chez le fournisseur (suffixe numérique en cas de collision), modifiable ensuite (3 à 20 caractères `[A-Za-z0-9_-]`) | Aucune étape bloquante à l'inscription. Le client propose de changer de pseudo à la première connexion (`?nouveau=1`). |
 | D15 | Plis déjà joués visibles pendant la mène ? | Tous les plis de la mène en cours sont visibles des joueurs | N'importe quel client peut de toute façon les mémoriser au fil des messages : les montrer à tous évite un avantage aux clients modifiés. |
 | D16 | Peut-on être en file classée et à une table privée ? | Non. Rejoindre ou créer une table privée fait quitter la file ; la file refuse un joueur assis. Fermer son dernier onglet fait aussi quitter la file. | Sinon, la même personne peut se retrouver assise à deux parties et perdre l'une par forfait. |
+| D17 | Déploiement continu | À chaque merge sur `master`, la CI se connecte en SSH avec une clé restreinte à `coinchenet-deployer` (une clé par dépôt, liée à sa cible `api` ou `web`). Pour l'API, le serveur n'accepte qu'un commit de `master` et lit la configuration à ce commit. API et client sur deux domaines | Le serveur n'a besoin d'aucun accès au dépôt ni au registre. Une clé de CI divulguée ne donne pas de shell : elle permet seulement de redéployer un commit de `master` (API) ou de publier un build du client (web). Le client et l'API se déploient indépendamment. |
