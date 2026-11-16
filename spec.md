@@ -116,7 +116,7 @@ Dans tous les cas, on ajoute ensuite la belote (+20) à l'équipe qui la détien
 | Mode de décompte | `faits-et-contrat` ou `contrat-seul` | **faits-et-contrat** |
 | Distribution | `traditionnelle` ou `aleatoire` | **aleatoire** |
 | Délai par action | 0 (illimité), 15, 30 ou 60 s | **30 s** (**[Décidé]**, configurable par l'hébergeur) |
-| Bots au démarrage | oui en table privée | non : 4 humains |
+| Bots au démarrage | oui en table privée | seulement faute d'adversaires, et la partie n'est alors pas classée (§ 4.1) |
 
 ---
 
@@ -126,7 +126,7 @@ Dans tous les cas, on ajoute ensuite la belote (+20) à l'équipe qui la détien
 
 - Chaque joueur a son **ELO individuel**. **[Décidé]** Il démarre à **1200**, avec un plancher à 100 (D8).
 - Seules les parties de la file classée font varier l'ELO.
-- Les bots n'ont pas d'ELO. Une partie classée démarre toujours avec 4 humains.
+- Les bots n'ont pas d'ELO. Une partie classée démarre toujours avec 4 humains ; une partie de la file que des bots complètent ne compte pas pour l'ELO (D19).
 
 ### 3.2 Formule
 
@@ -163,6 +163,10 @@ S_A = 1 si A gagne, 0 sinon
 - **[Décidé]** La fenêtre d'ELO tolérée part de ±100 et s'élargit de 50 toutes les 15 s, jusqu'à ±400.
 - Avec 4 joueurs seuls, les équipes sont équilibrées : le plus fort joue avec le plus faible.
 - **[Décidé]** Un duo affronte de préférence un autre duo. Après 30 s d'attente, il peut affronter deux joueurs seuls (D10).
+- **[Décidé]** Faute d'adversaires, des bots complètent la table du joueur qui attend depuis le plus longtemps : un bot toutes les 5 s d'attente (`COINCHE_ATTENTE_PAR_BOT`), jusqu'à trois (D19).
+  - Les tables entre 4 humains passent d'abord.
+  - Les autres joueurs en file rejoignent cette table quel que soit leur ELO. Un duo reste ensemble ; sinon le plus fort fait équipe avec un bot.
+  - Les bots acceptent d'office. La partie est de type `avec_bots` : elle ne compte pas pour l'ELO, le chat reste prédéfini et, comme en table privée, un bot reprend le siège d'un joueur qui abandonne.
 - Quand une table est trouvée, chaque joueur doit accepter dans les 15 s.
   - Ceux qui refusent ou ne répondent pas sortent de la file, avec leur partenaire de duo.
   - Les autres reviennent en file avec leur ancienneté.
@@ -402,3 +406,4 @@ Pistes pour la suite :
 | D16 | Peut-on être en file classée et à une table privée ? | Non. Rejoindre ou créer une table privée fait quitter la file ; la file refuse un joueur assis. Fermer son dernier onglet fait aussi quitter la file. | Sinon, la même personne peut se retrouver assise à deux parties et perdre l'une par forfait. |
 | D17 | Déploiement continu | À chaque merge sur `master`, la CI se connecte en SSH avec une clé restreinte à `coinchenet-deployer` (une clé par dépôt, liée à sa cible `api` ou `web`). Pour l'API, le serveur n'accepte qu'un commit de `master` et lit la configuration à ce commit. Les réglages `COINCHE_*` viennent des secrets et variables GitHub. API et client sur deux domaines | Le serveur n'a besoin d'aucun accès au dépôt ni au registre. Une clé de CI divulguée ne donne pas de shell : elle permet seulement de redéployer un commit de `master` (API) ou de publier un build du client (web). Le client et l'API se déploient indépendamment. |
 | D18 | Niveau et personnalité des bots | Quatre familles de bots (Kerfoule prudents, McBalance équilibrés, Lashpa agressifs, Narvaloche casse-cou) : la famille fixe la façon de jouer, réglée par six paramètres d'enchère et de jeu, et chaque bot porte un prénom tiré parmi les dix de sa famille. Le créateur d'une table privée choisit la famille de chaque bot ou la laisse au hasard ; un joueur absent est remplacé par une famille tirée au hasard | Des adversaires reconnaissables rendent les parties contre bots plus vivantes. Le tournoi entre profils (`coinchenet tournoi`) les garde de force comparable. Des niveaux de force calés sur l'ELO restent possibles avec les mêmes outils. |
+| D19 | Bots dans la file | Faute d'adversaires, un bot rejoint la table toutes les 5 s, jusqu'à la compléter ; la partie n'est pas classée | On peut toujours jouer en ligne, même seul, sans attendre plus de 15 s. Les bots ne sont pas calibrés face aux humains : les compter fausserait le classement. |

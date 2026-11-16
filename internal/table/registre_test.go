@@ -166,7 +166,7 @@ func TestRegistreTablePrivee(t *testing.T) {
 		require.NoError(t, err)
 		assert.Len(t, code, 6)
 		assert.Equal(t, "i1", verrous.proprietaire(cleVerrou(id)))
-		assert.Equal(t, map[Type]int{Classee: 0, Privee: 1}, r.NbTables())
+		assert.Equal(t, map[Type]int{Classee: 0, Privee: 1, AvecBots: 0}, r.NbTables())
 
 		resolu, ok, err := r.ResoudreCode(context.Background(), code)
 		require.NoError(t, err)
@@ -180,7 +180,7 @@ func TestRegistreTablePrivee(t *testing.T) {
 
 		require.NoError(t, r.Envoyer(context.Background(), id, commande(CmdQuitter, alice, "a", nil)))
 		synctest.Wait()
-		assert.Equal(t, map[Type]int{Classee: 0, Privee: 0}, r.NbTables(), "la table fermée est retirée")
+		assert.Equal(t, map[Type]int{Classee: 0, Privee: 0, AvecBots: 0}, r.NbTables(), "la table fermée est retirée")
 		assert.Empty(t, verrous.proprietaire(cleVerrou(id)), "et son verrou libéré")
 		_, ok, _ = r.ResoudreCode(context.Background(), code)
 		assert.False(t, ok, "et son code aussi")

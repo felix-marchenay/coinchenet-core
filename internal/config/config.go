@@ -54,6 +54,8 @@ type Config struct {
 	DelaiLobby         time.Duration
 	// IntervalleReprise : fréquence de recherche des parties orphelines à reprendre.
 	IntervalleReprise time.Duration
+	// AttenteParBot : faute d'adversaires dans la file, un bot rejoint la table à chaque palier ; 0 désactive.
+	AttenteParBot time.Duration
 }
 
 // Charger lit la configuration ; getenv vaut os.Getenv en production.
@@ -86,6 +88,7 @@ func Charger(getenv func(string) string) (Config, error) {
 		DelaiRetour:        l.duree("COINCHE_DELAI_RETOUR", 3*time.Minute),
 		DelaiLobby:         l.duree("COINCHE_DELAI_LOBBY", 30*time.Minute),
 		IntervalleReprise:  l.duree("COINCHE_INTERVALLE_REPRISE", 10*time.Second),
+		AttenteParBot:      l.duree("COINCHE_ATTENTE_PAR_BOT", 5*time.Second),
 	}
 	c.URLFront = strings.TrimRight(l.texte("COINCHE_URL_FRONT", c.URLPublique), "/")
 	c.Origines = l.liste("COINCHE_ORIGINES", []string{c.URLFront})

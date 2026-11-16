@@ -47,6 +47,7 @@ type Commande struct {
 	Ref         string        `json:"ref,omitempty"`
 }
 
+// Proposition : comme dans Appariement, un Joueur zéro est un siège tenu par un bot.
 type Proposition struct {
 	ID       string             `json:"id"`
 	EquipeA  [2]table.Joueur    `json:"equipe_a"`
@@ -56,12 +57,37 @@ type Proposition struct {
 	ExpireLe time.Time          `json:"expire_le"`
 }
 
-func (p *Proposition) joueurs() []table.Joueur {
-	return []table.Joueur{p.EquipeA[0], p.EquipeB[0], p.EquipeA[1], p.EquipeB[1]}
+func (p *Proposition) humains() []table.Joueur {
+	var res []table.Joueur
+	for _, j := range [...]table.Joueur{p.EquipeA[0], p.EquipeB[0], p.EquipeA[1], p.EquipeB[1]} {
+		if j.ID != uuid.Nil {
+			res = append(res, j)
+		}
+	}
+	return res
 }
 
 func (p *Proposition) contient(id uuid.UUID) bool {
-	return slices.ContainsFunc(p.joueurs(), func(j table.Joueur) bool { return j.ID == id })
+	return slices.ContainsFunc(p.humains(), func(j table.Joueur) bool { return j.ID == id })
+}
+
+// acceptes compte les bots, qui acceptent d'office.
+func (p *Proposition) acceptes() int {
+	return len(p.Acceptes) + 4 - len(p.humains())
+}
+
+func (p *Proposition) trouvee() MessageTrouvee {
+	return MessageTrouvee{Proposition: p.ID, ExpireLe: p.ExpireLe, EquipeA: equipe(p.EquipeA), EquipeB: equipe(p.EquipeB)}
+}
+
+func equipe(e [2]table.Joueur) [2]*table.Joueur {
+	var res [2]*table.Joueur
+	for i := range e {
+		if e[i].ID != uuid.Nil {
+			res[i] = &e[i]
+		}
+	}
+	return res
 }
 
 type Invitation struct {
@@ -132,11 +158,12 @@ type MessageQuittee struct {
 	Raison string `json:"raison"`
 }
 
+// MessageTrouvee : un siège nul est tenu par un bot, et la partie n'est alors pas classée.
 type MessageTrouvee struct {
-	Proposition string          `json:"proposition"`
-	ExpireLe    time.Time       `json:"expire_le"`
-	EquipeA     [2]table.Joueur `json:"equipe_a"`
-	EquipeB     [2]table.Joueur `json:"equipe_b"`
+	Proposition string           `json:"proposition"`
+	ExpireLe    time.Time        `json:"expire_le"`
+	EquipeA     [2]*table.Joueur `json:"equipe_a"`
+	EquipeB     [2]*table.Joueur `json:"equipe_b"`
 }
 
 type MessageAcceptation struct {
@@ -201,9 +228,9 @@ func (m *Moteur) Appliquer(c Commande, maintenant time.Time) Effets {
 		}
 		p.Acceptes[c.Joueur.ID] = true
 		e.Modifie = true
-		if len(p.Acceptes) < 4 {
-			for _, j := range p.joueurs() {
-				e.notifier(j.ID, MsgAcceptation, MessageAcceptation{Proposition: p.ID, Acceptes: len(p.Acceptes)})
+		if p.acceptes() < 4 {
+			for _, j := range p.humains() {
+				e.notifier(j.ID, MsgAcceptation, MessageAcceptation{Proposition: p.ID, Acceptes: p.acceptes()})
 			}
 			return e
 		}
@@ -238,7 +265,7 @@ func (m *Moteur) Tick(maintenant time.Time) Effets {
 			continue
 		}
 		fautifs := map[uuid.UUID]bool{}
-		for _, j := range p.joueurs() {
+		for _, j := range p.humains() {
 			if !p.Acceptes[j.ID] {
 				fautifs[j.ID] = true
 			}
@@ -271,8 +298,8 @@ func (m *Moteur) Tick(maintenant time.Time) Effets {
 			delete(m.Etat.Tickets, t.ID)
 		}
 		m.Etat.Propositions[p.ID] = p
-		for _, j := range p.joueurs() {
-			e.notifier(j.ID, MsgTrouvee, MessageTrouvee{Proposition: p.ID, ExpireLe: p.ExpireLe, EquipeA: p.EquipeA, EquipeB: p.EquipeB})
+		for _, j := range p.humains() {
+			e.notifier(j.ID, MsgTrouvee, p.trouvee())
 		}
 		e.Modifie = true
 	}
@@ -292,7 +319,9 @@ func (m *Moteur) NbEnFile() int {
 func (m *Moteur) TableEchouee(c CreationTable) Effets {
 	var e Effets
 	for _, j := range [...]table.Joueur{c.EquipeA[0], c.EquipeA[1], c.EquipeB[0], c.EquipeB[1]} {
-		e.notifier(j.ID, MsgAnnulee, MessageAnnulee{Proposition: c.Proposition, Raison: "erreur", EnFile: false})
+		if j.ID != uuid.Nil {
+			e.notifier(j.ID, MsgAnnulee, MessageAnnulee{Proposition: c.Proposition, Raison: "erreur", EnFile: false})
+		}
 	}
 	return e
 }
@@ -310,8 +339,8 @@ func (m *Moteur) etat(j table.Joueur, e *Effets) {
 		return
 	}
 	if p := m.propositionDe(j.ID); p != nil {
-		e.notifier(j.ID, MsgTrouvee, MessageTrouvee{Proposition: p.ID, ExpireLe: p.ExpireLe, EquipeA: p.EquipeA, EquipeB: p.EquipeB})
-		e.notifier(j.ID, MsgAcceptation, MessageAcceptation{Proposition: p.ID, Acceptes: len(p.Acceptes)})
+		e.notifier(j.ID, MsgTrouvee, p.trouvee())
+		e.notifier(j.ID, MsgAcceptation, MessageAcceptation{Proposition: p.ID, Acceptes: p.acceptes()})
 	}
 }
 

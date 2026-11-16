@@ -71,7 +71,7 @@ func NouvellesMetriques(tables func() map[table.Type]int) *Metriques {
 		collectors.NewGoCollector(),
 		collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
 	)
-	for _, typ := range []table.Type{table.Classee, table.Privee} {
+	for _, typ := range table.Types {
 		r.MustRegister(prometheus.NewGaugeFunc(prometheus.GaugeOpts{
 			Name:        "coinche_tables_actives",
 			Help:        "Tables exécutées par cette instance.",

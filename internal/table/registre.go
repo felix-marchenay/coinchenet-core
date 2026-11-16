@@ -153,8 +153,8 @@ func (r *Registre) Arreter(ctx context.Context) {
 	}
 }
 
-// CreerClassee lance une partie classée et attend qu'elle soit enregistrée :
-// la file a déjà retiré les joueurs, un échec doit lui être signalé.
+// CreerClassee lance une partie de la file (voir NouvelleTableClassee) et attend qu'elle soit
+// enregistrée : la file a déjà retiré les joueurs, un échec doit lui être signalé.
 func (r *Registre) CreerClassee(ctx context.Context, equipeA, equipeB [2]Joueur) (uuid.UUID, error) {
 	id := uuid.New()
 	t, err := NouvelleTableClassee(id, equipeA, equipeB, r.cfg.OptionsClassees, r.deps, r.cfg.Table)
@@ -227,7 +227,10 @@ func (r *Registre) Vivante(ctx context.Context, table uuid.UUID) (bool, error) {
 func (r *Registre) NbTables() map[Type]int {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	n := map[Type]int{Classee: 0, Privee: 0}
+	n := make(map[Type]int, len(Types))
+	for _, typ := range Types {
+		n[typ] = 0
+	}
 	for _, e := range r.tables {
 		n[e.table.typ]++
 	}
