@@ -150,6 +150,7 @@ func TestDesBotsCompletentLaTableDuJoueurSeul(t *testing.T) {
 	e := m.Tick(t0.Add(15 * time.Second))
 	require.Len(t, e.Notifications, 1, "les bots ne reçoivent rien")
 	trouvee := donnees[MessageTrouvee](t, e, j.ID, MsgTrouvee)
+	assert.Equal(t, table.AvecBots, trouvee.Type)
 	assert.Equal(t, j, *trouvee.EquipeA[0])
 	assert.Nil(t, trouvee.EquipeA[1])
 	assert.Equal(t, [2]*table.Joueur{}, trouvee.EquipeB)

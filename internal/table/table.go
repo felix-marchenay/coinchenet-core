@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"slices"
 	"strings"
 	"time"
 	"unicode"
@@ -137,17 +136,13 @@ func NouvelleTablePrivee(id uuid.UUID, createur Joueur, code string, options Opt
 }
 
 // NouvelleTableClassee crée la table d'une partie de la file : l'équipe A aux sièges 0 et 2, l'équipe B
-// aux sièges 1 et 3. Un Joueur zéro laisse son siège à un bot, et la partie est alors AvecBots.
+// aux sièges 1 et 3. Un Joueur zéro laisse son siège à un bot (voir TypeFile).
 func NouvelleTableClassee(id uuid.UUID, equipeA, equipeB [2]Joueur, options Options, deps Dependances, cfg Config) (*Table, error) {
 	if err := options.Valider(); err != nil {
 		return nil, err
 	}
 	joueurs := [...]Joueur{equipeA[0], equipeB[0], equipeA[1], equipeB[1]}
-	typ := Classee
-	if slices.ContainsFunc(joueurs[:], func(j Joueur) bool { return j.ID == uuid.Nil }) {
-		typ = AvecBots
-	}
-	t := nouvelleTable(id, typ, options, deps, cfg)
+	t := nouvelleTable(id, TypeFile(equipeA, equipeB), options, deps, cfg)
 	for i, j := range joueurs {
 		if j.ID != uuid.Nil {
 			t.sieges[i] = &occupant{joueur: j, connexions: map[string]struct{}{}}

@@ -23,12 +23,22 @@ type Type string
 const (
 	Classee Type = "classee"
 	Privee  Type = "privee"
-	// AvecBots : partie de la file que des bots complètent, faute d'adversaires ; elle ne compte pas
-	// pour l'ELO et, comme en privé, un bot reprend le siège d'un joueur qui abandonne.
+	// AvecBots : partie de la file où une équipe n'a que des bots ; elle ne compte pas pour l'ELO et,
+	// comme en privé, un bot reprend le siège d'un joueur qui abandonne.
 	AvecBots Type = "avec_bots"
 )
 
 var Types = []Type{Classee, Privee, AvecBots}
+
+// TypeFile : une partie de la file est classée dès que chaque équipe compte un humain, bots compris.
+// Un Joueur zéro est un siège tenu par un bot.
+func TypeFile(equipeA, equipeB [2]Joueur) Type {
+	humain := func(e [2]Joueur) bool { return e[0].ID != uuid.Nil || e[1].ID != uuid.Nil }
+	if humain(equipeA) && humain(equipeB) {
+		return Classee
+	}
+	return AvecBots
+}
 
 type Statut string
 

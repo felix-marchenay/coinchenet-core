@@ -17,8 +17,10 @@ const (
 	KConfirme     = 20
 	SeuilConfirme = 30
 	// SeuilClassement est le nombre de parties à jouer pour apparaître au classement public.
-	SeuilClassement = 10
+	SeuilClassement = 5
 	PenaliteAbandon = 15
+	// EloBot est l'ELO prêté à un bot pour calculer la moyenne de son équipe.
+	EloBot = EloInitial
 )
 
 type Participant struct {
@@ -59,11 +61,9 @@ func Calculer(participants []Participant, gagnante coinche.Equipe) []Variation {
 		nb[p.Equipe]++
 		abandon[p.Equipe] = abandon[p.Equipe] || p.Abandon
 	}
+	// Un siège sans participant est tenu par un bot.
 	moyenne := func(e coinche.Equipe) float64 {
-		if nb[e] == 0 {
-			return EloInitial
-		}
-		return somme[e] / nb[e]
+		return (somme[e] + (2-nb[e])*EloBot) / 2
 	}
 
 	variations := make([]Variation, len(participants))

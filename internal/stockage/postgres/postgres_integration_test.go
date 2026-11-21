@@ -432,11 +432,11 @@ func TestClassement(t *testing.T) {
 	ctx := context.Background()
 	elos := map[string][2]int{
 		"Premier":    {1800, 50},
-		"Second":     {1700, 10},
+		"Second":     {1700, 5},
 		"ExAequoA":   {1600, 20},
 		"ExAequoB":   {1600, 30},
 		"Dernier":    {1100, 11},
-		"Provisoire": {2500, 9},
+		"Provisoire": {2500, 4},
 	}
 	ids := map[string]uuid.UUID{}
 	for nom, e := range elos {
