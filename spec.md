@@ -116,7 +116,7 @@ Dans tous les cas, on ajoute ensuite la belote (+20) à l'équipe qui la détien
 | Mode de décompte | `faits-et-contrat` ou `contrat-seul` | **faits-et-contrat** |
 | Distribution | `traditionnelle` ou `aleatoire` | **aleatoire** |
 | Délai par action | 0 (illimité), 15, 30 ou 60 s | **30 s** (**[Décidé]**, configurable par l'hébergeur) |
-| Bots au démarrage | oui en table privée | seulement faute d'adversaires, et la partie n'est alors pas classée (§ 4.1) |
+| Bots au démarrage | oui en table privée | seulement faute d'adversaires ; la partie reste classée si chaque équipe compte un humain (§ 4.1) |
 
 ---
 
@@ -126,7 +126,8 @@ Dans tous les cas, on ajoute ensuite la belote (+20) à l'équipe qui la détien
 
 - Chaque joueur a son **ELO individuel**. **[Décidé]** Il démarre à **1200**, avec un plancher à 100 (D8).
 - Seules les parties de la file classée font varier l'ELO.
-- Les bots n'ont pas d'ELO. Une partie classée démarre toujours avec 4 humains ; une partie de la file que des bots complètent ne compte pas pour l'ELO (D19).
+- Une partie de la file est classée dès que chaque équipe compte au moins un humain : on affronte toujours un humain. Si une équipe n'a que des bots, la partie (type `avec_bots`) ne compte pas pour l'ELO (D19).
+- Un bot compte pour 1200 dans la moyenne de son équipe ; il n'a pas d'ELO propre.
 
 ### 3.2 Formule
 
@@ -139,7 +140,7 @@ S_A = 1 si A gagne, 0 sinon
 ```
 
 - **[Décidé]** `K = 40` pendant les 30 premières parties classées du joueur, puis `K = 20` (D8). Deux partenaires peuvent donc varier différemment.
-- **[Décidé]** Un joueur reste « provisoire » tant qu'il a joué moins de 10 parties classées. Il n'apparaît alors pas au classement public et n'a pas de rang (D8).
+- **[Décidé]** Un joueur reste « provisoire » tant qu'il a joué moins de 5 parties classées. Il n'apparaît alors pas au classement public et n'a pas de rang (D8).
 - Le calcul se fait en base, dans la même transaction que la clôture de la partie. Il part des ELO **courants**, ceux du début de partie ayant pu changer entre-temps.
 
 ### 3.3 Abandon
@@ -166,7 +167,7 @@ S_A = 1 si A gagne, 0 sinon
 - **[Décidé]** Faute d'adversaires, des bots complètent la table du joueur qui attend depuis le plus longtemps : un bot toutes les 5 s d'attente (`COINCHE_ATTENTE_PAR_BOT`), jusqu'à trois (D19).
   - Les tables entre 4 humains passent d'abord.
   - Les autres joueurs en file rejoignent cette table quel que soit leur ELO. Un duo reste ensemble ; sinon le plus fort fait équipe avec un bot.
-  - Les bots acceptent d'office. La partie est de type `avec_bots` : elle ne compte pas pour l'ELO et, comme en table privée, un bot reprend le siège d'un joueur qui abandonne.
+  - Les bots acceptent d'office. La partie est classée si chaque équipe compte un humain. Sinon, elle est de type `avec_bots` : elle ne compte pas pour l'ELO et, comme en table privée, un bot reprend le siège d'un joueur qui abandonne.
 - Quand une table est trouvée, chaque joueur doit accepter dans les 15 s.
   - Ceux qui refusent ou ne répondent pas sortent de la file, avec leur partenaire de duo.
   - Les autres reviennent en file avec leur ancienneté.
@@ -394,7 +395,7 @@ Pistes pour la suite :
 | D5 | La belote compte-t-elle pour le contrat ? | Oui | Usage majoritaire en coinche en ligne. |
 | D6 | Contrat fait à égalité de points | Il faut atteindre le contrat **et** battre la défense | Pas de « litige » en coinche : 80 contre 82 est chuté. |
 | D7 | Points d'un capot ou d'une générale réussis | Capot : 250 faits + 250 de contrat = 500. Générale : 250 + 500 = 750. Chute : 160 + valeur pour la défense. Coinché : 160 + valeur × multiplicateur. Si l'équipe gagnante a fait tous les plis, la base passe de 160 à 250, y compris pour une défense qui fait capot. | Une seule formule pour tous les contrats, cohérente avec le capot non annoncé (250 points faits). |
-| D8 | Paramètres de l'ELO | Départ à 1200, plancher à 100, K = 40 pendant 30 parties puis 20, classement public à partir de 10 parties | Valeurs classiques de l'ELO : convergence rapide des nouveaux, stabilité ensuite. |
+| D8 | Paramètres de l'ELO | Départ à 1200, plancher à 100, K = 40 pendant 30 parties puis 20, classement public à partir de 5 parties | Valeurs classiques de l'ELO : convergence rapide des nouveaux, stabilité ensuite. Le seuil de 5 parties fait entrer vite les nouveaux au palmarès. |
 | D9 | Abandon | 3 minutes pour revenir, puis forfait. Pénalité de −15 pour l'auteur, 0 pour son partenaire. | Assez long pour une coupure réseau, assez court pour ne pas bloquer trois joueurs. Le partenaire ne doit pas payer pour l'autre. |
 | D10 | Un duo doit-il affronter un duo ? | De préférence. Après 30 s d'attente, il peut affronter deux joueurs seuls. | Équité (coordination d'un duo habitué) sans attente interminable aux heures creuses. |
 | D11 | Absence | 2 délais expirés d'affilée font déclarer le joueur absent ; le bot joue alors sans attendre. | Évite de faire attendre 30 s à chaque tour les trois autres joueurs. |
@@ -405,5 +406,5 @@ Pistes pour la suite :
 | D16 | Peut-on être en file classée et à une table privée ? | Non. Rejoindre ou créer une table privée fait quitter la file ; la file refuse un joueur assis. Fermer son dernier onglet fait aussi quitter la file. | Sinon, la même personne peut se retrouver assise à deux parties et perdre l'une par forfait. |
 | D17 | Déploiement continu | À chaque merge sur `master`, la CI se connecte en SSH avec une clé restreinte à `coinchenet-deployer` (une clé par dépôt, liée à sa cible `api` ou `web`). Pour l'API, le serveur n'accepte qu'un commit de `master` et lit la configuration à ce commit. Les réglages `COINCHE_*` viennent des secrets et variables GitHub. API et client sur deux domaines | Le serveur n'a besoin d'aucun accès au dépôt ni au registre. Une clé de CI divulguée ne donne pas de shell : elle permet seulement de redéployer un commit de `master` (API) ou de publier un build du client (web). Le client et l'API se déploient indépendamment. |
 | D18 | Niveau et personnalité des bots | Quatre familles de bots (Kerfoule prudents, McBalance équilibrés, Lashpa agressifs, Narvaloche casse-cou) : la famille fixe la façon de jouer, réglée par six paramètres d'enchère et de jeu, et chaque bot porte un prénom tiré parmi les dix de sa famille. Le créateur d'une table privée choisit la famille de chaque bot ou la laisse au hasard ; un joueur absent est remplacé par une famille tirée au hasard | Des adversaires reconnaissables rendent les parties contre bots plus vivantes. Le tournoi entre profils (`coinchenet tournoi`) les garde de force comparable. Des niveaux de force calés sur l'ELO restent possibles avec les mêmes outils. |
-| D19 | Bots dans la file | Faute d'adversaires, un bot rejoint la table toutes les 5 s, jusqu'à la compléter ; la partie n'est pas classée | On peut toujours jouer en ligne, même seul, sans attendre plus de 15 s. Les bots ne sont pas calibrés face aux humains : les compter fausserait le classement. |
+| D19 | Bots dans la file | Faute d'adversaires, un bot rejoint la table toutes les 5 s, jusqu'à la compléter. La partie est classée si chaque équipe compte un humain, un bot valant 1200 dans la moyenne de son équipe ; sinon elle ne compte pas pour l'ELO | On peut toujours jouer en ligne, même seul, sans attendre plus de 15 s. Exiger un humain en face empêche de gagner de l'ELO contre des bots seuls. Le niveau des bots face aux humains reste à mesurer : 1200 est l'ELO de départ. |
 | D20 | Chat en partie classée | Texte libre, comme en table privée | Les joueurs veulent pouvoir discuter. Le risque qu'un joueur annonce son jeu à son partenaire est accepté : les messages sont journalisés pour la modération, et un duo peut de toute façon se parler hors du site. |

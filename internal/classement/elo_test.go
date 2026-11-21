@@ -52,6 +52,16 @@ func TestMoyenneDEquipe(t *testing.T) {
 	assert.Equal(t, []int{-10, 10, -10, 10}, deltas(vs))
 }
 
+func TestUnBotCompteComme1200(t *testing.T) {
+	// A : un humain à 1600 et un bot, (1600 + 1200) / 2 = 1400 ; B : 1400 → comme à niveau égal.
+	ps := []Participant{
+		{JoueurID: uuid.New(), Equipe: coinche.EquipeA, Elo: 1600, NbParties: 100},
+		{JoueurID: uuid.New(), Equipe: coinche.EquipeB, Elo: 1400, NbParties: 100},
+		{JoueurID: uuid.New(), Equipe: coinche.EquipeB, Elo: 1400, NbParties: 100},
+	}
+	assert.Equal(t, []int{10, -10, -10}, deltas(Calculer(ps, coinche.EquipeA)))
+}
+
 func TestVictoireDuFavori(t *testing.T) {
 	vs := Calculer(participants([4]int{1800, 1400, 1800, 1400}, 100), coinche.EquipeA)
 	assert.Equal(t, []int{2, -2, 2, -2}, deltas(vs), "le favori gagne peu")

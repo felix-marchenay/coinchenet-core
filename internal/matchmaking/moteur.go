@@ -77,7 +77,13 @@ func (p *Proposition) acceptes() int {
 }
 
 func (p *Proposition) trouvee() MessageTrouvee {
-	return MessageTrouvee{Proposition: p.ID, ExpireLe: p.ExpireLe, EquipeA: equipe(p.EquipeA), EquipeB: equipe(p.EquipeB)}
+	return MessageTrouvee{
+		Proposition: p.ID,
+		ExpireLe:    p.ExpireLe,
+		Type:        table.TypeFile(p.EquipeA, p.EquipeB),
+		EquipeA:     equipe(p.EquipeA),
+		EquipeB:     equipe(p.EquipeB),
+	}
 }
 
 func equipe(e [2]table.Joueur) [2]*table.Joueur {
@@ -158,10 +164,11 @@ type MessageQuittee struct {
 	Raison string `json:"raison"`
 }
 
-// MessageTrouvee : un siège nul est tenu par un bot, et la partie n'est alors pas classée.
+// MessageTrouvee : un siège nul est tenu par un bot.
 type MessageTrouvee struct {
 	Proposition string           `json:"proposition"`
 	ExpireLe    time.Time        `json:"expire_le"`
+	Type        table.Type       `json:"type"`
 	EquipeA     [2]*table.Joueur `json:"equipe_a"`
 	EquipeB     [2]*table.Joueur `json:"equipe_b"`
 }

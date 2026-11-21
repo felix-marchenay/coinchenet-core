@@ -558,7 +558,7 @@ func TestTableDeLaFileCompleteeParDesBots(t *testing.T) {
 		alice := joueur("Alice", 1500)
 		tb, err := NouvelleTableClassee(uuid.New(), [2]Joueur{alice, {}}, [2]Joueur{}, OptionsClassees(), env.deps, env.cfg)
 		require.NoError(t, err)
-		assert.Equal(t, AvecBots, tb.Type(), "une partie avec bots ne compte pas pour l'ELO")
+		assert.Equal(t, AvecBots, tb.Type(), "sans humain en face, la partie ne compte pas pour l'ELO")
 		lancerActeur(t, tb)
 		tb.Envoyer(commande(CmdConnexion, alice, "a", nil))
 		synctest.Wait()
@@ -576,6 +576,15 @@ func TestTableDeLaFileCompleteeParDesBots(t *testing.T) {
 		}
 		assert.Len(t, pseudos, 3)
 	})
+}
+
+func TestTypeFile(t *testing.T) {
+	a, b, c := joueur("A", 1200), joueur("B", 1200), joueur("C", 1200)
+	bot := Joueur{}
+	assert.Equal(t, AvecBots, TypeFile([2]Joueur{a, bot}, [2]Joueur{bot, bot}))
+	assert.Equal(t, AvecBots, TypeFile([2]Joueur{a, b}, [2]Joueur{bot, bot}), "un duo contre des bots")
+	assert.Equal(t, Classee, TypeFile([2]Joueur{a, bot}, [2]Joueur{b, bot}), "un humain en face suffit")
+	assert.Equal(t, Classee, TypeFile([2]Joueur{a, b}, [2]Joueur{c, bot}))
 }
 
 func TestRepriseDUneTable(t *testing.T) {

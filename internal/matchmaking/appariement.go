@@ -166,8 +166,8 @@ func apparierHumains(ordre []Ticket, utilises map[string]bool, maintenant time.T
 	return res
 }
 
-// avecBots réunit au pivot jusqu'à trois humains de la file, quel que soit leur ELO : la partie ne
-// sera pas classée. Elle part dès que les bots que l'attente du pivot autorise complètent la table.
+// avecBots réunit au pivot jusqu'à trois humains de la file, quel que soit leur ELO, faute de mieux.
+// La table part dès que les bots que l'attente du pivot autorise la complètent.
 func avecBots(pivot Ticket, autres []Ticket, attente time.Duration, p Parametres) *Appariement {
 	bots := min(3, int(attente/p.AttenteParBot))
 	if bots == 0 {
